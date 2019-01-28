@@ -4,7 +4,7 @@ import iio
 
 
 def getIIOContext():
-    ctx = iio.XMLContext("./pluto.xml")
+    ctx = iio.XMLContext("pluto.xml")
 
     return ctx
 
