@@ -6,15 +6,27 @@ from matplotlib.widgets import Button
 from matplotlib import style
 import random
 from scipy import signal as sig
+import PlutoController
 
 style.use('fivethirtyeight')
 
+_animation_period = 10000
+
 playing = True
-xs = []
-ys = []
 rxData = None
+txData = None
 plot_fir = False
+freq_dom = False
+compl = False
 PLOT_COLOURS = ('b', 'r')
+
+def get_animation_period():
+        return _animation_period / 1e3
+
+
+def set_animation_period(value):
+        global _animation_period
+        _animation_period = value * 1e3 # convert seconds to milliseconds
 
 def toggle(evnt):
         global playing, ani
@@ -25,9 +37,10 @@ def toggle(evnt):
         playing = not playing
 
 def openWindow():
-        global fig, ax1
+        global fig, ax1, ax2
         fig = plt.figure()
-        ax1 = fig.add_subplot(1,1,1)
+        ax1 = fig.add_subplot(121)
+        ax2 = fig.add_subplot(122)
         setupCanvas()
 
 def handle_close(evnt):
@@ -35,7 +48,7 @@ def handle_close(evnt):
 
 def setupCanvas():
         global fig, ax1, ani
-        ani = animation.FuncAnimation(fig, animate, interval=1000)
+        ani = animation.FuncAnimation(fig, animate, interval=_animation_period)
         plt.show()
         fig.canvas.mpl_connect('close_event', handle_close)
 
@@ -61,14 +74,51 @@ def fir_plot(rxData, a=1, grid=True, phase=False):
         # plt.show()
 
 def animate(i):
-        global fig, ax1, xs, ys
+        global fig, ax1, ax2, xs, ys
         ax1.clear()
-        # plt.ylabel('Imaginary')
-        # plt.xlabel('Real')
-        # plt.axis([-.2, .2, -.2, .2])
-        # ax1.plot(xs, ys, 'o')
-        if fir_plot == False or rxData is None:
-                ax1.plot(xs, ys)
-        else:
+        ax2.clear()
+        ani.event_source.interval = _animation_period
+        
+        if plot_fir and rxData is not None:
                 fir_plot(rxData)
+
+        if rxData is not None:
+                ax1.set_title("Receiving")
+                if PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Time':
+                        rawRXData = PlutoController.getSdr().complex2raw(rxData, 16)
+                        ax1.plot(rawRXData[0::2], PLOT_COLOURS[0])
+                        # ax1.plot(rawRXData[1::2])
+
+                elif PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Frequency':
+                        xs = [x.real for x in rxData]
+                        ys = [x.imag for x in rxData]
+
+                        ax1.semilogy(xs, ys)
+
+                elif PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Constellation (X vs Y)':
+                        xs = [x.real for x in rxData]
+                        ys = [x.imag for x in rxData]
+
+                        ax1.axis([-1, 1, -1, 1])
+                        ax1.plot(xs, ys, 'o')
+
+        if txData is not None:
+                ax2.set_title("Transmition")
+                if PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Time':
+                        rawTXData = PlutoController.getSdr().complex2raw(txData, 16)
+                        ax2.plot(rawTXData[0::2], PLOT_COLOURS[1])
+                        # ax2.plot(rawTXData[1::2])
+
+                elif PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Frequency':
+                        xs = [x.real for x in txData]
+                        ys = [x.imag for x in txData]
+
+                        ax2.semilogy(xs, ys)
+
+                elif PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Constellation (X vs Y)':
+                        xs = [x.real for x in txData]
+                        ys = [x.imag for x in txData]
+
+                        ax2.axis([-1, 1, -1, 1])
+                        ax2.plot(xs, ys, 'o')
 

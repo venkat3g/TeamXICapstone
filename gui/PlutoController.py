@@ -4,10 +4,24 @@ import time
 from pluto.pluto_sdr import PlutoSdr
 import numpy as np
 from pluto import fir_tools
+import scipy.signal as signal
+import scipy.fftpack as fftpack
 
 
-sdr = None
-rxSamples = 1000
+_sdr = None
+
+threadPeriod = 5
+
+rxSamples = 2**16
+rxGainModeIndex =  1
+rxGainModes = ["manual", "slow_attack", "fast_attack", "hybrid"]
+rxPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
+rxPlotIndex = 2
+
+txSamples = 2**15
+txDataFile = ""
+txPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
+txPlotIndex = 0
 
 def getSdr():
     """
@@ -15,15 +29,15 @@ def getSdr():
     
     returns: type=pluto.pluto_sdr.PlutoSdr
     """
-    global sdr
-    if sdr is None:
+    global _sdr
+    if _sdr is None:
         ctxs = iio.scan_contexts()
         if len(ctxs.keys()) > 0:
-            sdr = PlutoSdr(uri=str(next(enumerate(ctxs))[1]))
+            _sdr = PlutoSdr(uri=str(next(enumerate(ctxs))[1]))
         else:
             raise Exception("Could not connect to any Pluto Devices.")
 
-    return sdr
+    return _sdr
 
 def getIIOContext():
     """
@@ -31,7 +45,7 @@ def getIIOContext():
 
     returns: type=iio.Context
     """
-    return getSdr().ctx
+    return _sdr.ctx
 
 def configure(frequency, sampling_frequency):
     """
@@ -43,8 +57,8 @@ def configure(frequency, sampling_frequency):
         sampling_frequency: type=int
             The sampling frequency of the Pluto (in MSPS)
     """
-    getSdr().rx_lo_freq = frequency
-    getSdr().sampling_frequency = sampling_frequency
+    _sdr.rx_lo_freq = frequency
+    _sdr.sampling_frequency = sampling_frequency
 
 def writeXSamples(x):
     """
@@ -54,14 +68,24 @@ def writeXSamples(x):
         x: type=int
             the number of samples to write
     """
-    buf = bytearray()
-    for x in range(rxSamples * 16 / 8):
-        buf.append(0) # forces x to fit in a byte
-        buf.append(x % 0xff) # forces x to fit in a byte
+    N = x
 
-    iq = np.frombuffer(buf, np.int16)
 
-    sdr.writeTx(iq, True)
+    fc = _sdr.tx_lo_freq
+    ts = 1/float(_sdr.sampling_frequency * 1e6)
+    t = np.arange(0, N*ts, ts)
+
+    i = np.sin(2*np.pi*t*fc) * 2**10
+    q = np.cos(2*np.pi*t*fc) * 2**10
+    
+    iq = np.empty((i.size + q.size,), dtype=i.dtype)
+    iq[0::2] = i
+    iq[1::2] = q
+    iq = np.int16(iq)
+
+    _sdr.writeTx(iq, True)
+
+    return _sdr.raw2complex(iq)
 
 def writeXComplexSamples(x):
     """
@@ -77,37 +101,50 @@ def writeXComplexSamples(x):
 
     iq = np.frombuffer(buf, np.complex128)
 
-    sdr.writeTx(iq, False)
+    _sdr.writeTx(iq, False)
 
-def readImagRealRX():
+def readComplexRX():
     """
     Read Imaginary and Complex RX data
     """    
-    rxData = sdr.readRx(rxSamples, False) # Imaginary & Real
-    ys = [ y.imag for i, y in enumerate(rxData) ] # Imaginary
-    xs = [ x.real for i, x in enumerate(rxData) ] # Real
-    return (ys, xs)
+    rxData = _sdr.readRx(rxSamples, False) # Imaginary & Real
+    # ys = [ y.imag for i, y in enumerate(rxData) ] # Imaginary
+    # xs = [ x.real for i, x in enumerate(rxData) ] # Real
+    return rxData
 
 def readRawRX():
     """
     Read Raw RX data
     """
-    rxData = sdr.readRx(rxSamples, True) # raw
-    ys = [ y for y in rxData ] # time domain samples
-    xs = [ t  for t in range(len(rxData)) ] # sample numbers
-    return (ys, xs, rxData)
+    rxData = _sdr.readRx(rxSamples, True) # raw
+    return rxData
 
 def plutoRXThread(args):
-    global sdr, rxSamples
+    global _sdr, rxSamples
     while not args['done']:
 
-        (ys, xs, rxData) = readRawRX()
+        txData = writeXSamples(txSamples)
 
-        writeXSamples(rxSamples)
+        rxData = readComplexRX()
 
-        testPlot.xs = xs
-        testPlot.ys = ys
-        testPlot.plot_fir = True
+        # f, Pper_spec = signal.periodogram(ys, 1.0, 'flattop', scaling='spectrum')
+
+        
+        testPlot.compl = True
+        # testPlot.plot_fir = True
         testPlot.rxData = rxData
+        testPlot.txData = txData
 
-        time.sleep(0.1)
+        time.sleep(threadPeriod)
+
+
+def updateGainMode(value):
+    _sdr.rx_gain_mode = value
+
+def updateRXPlot(value):
+    global rxPlotIndex
+    rxPlotIndex = rxPlotList.index(value)
+
+def updateTXPlot(value):
+    global txPlotIndex
+    txPlotIndex = txPlotList.index(value)

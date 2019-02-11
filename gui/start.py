@@ -14,7 +14,7 @@ while os.path.isfile(filename):
     i = i + 1
     filename = 'pluto' + str(i) + '.log'
 
-logging.basicConfig(filename=filename, level=logging.DEBUG)
+# logging.basicConfig(filename=filename, level=logging.DEBUG)
 
 deviceInfoPage.vp_start_gui()
 
