@@ -6,8 +6,11 @@ import testPlot
 
 try:
     import Tkinter as tk
+    import tkFileDialog as fileDialog
 except ImportError:
     import tkinter as tk
+    from tkinter import fileDialog
+    
 
 try:
     import ttk
@@ -31,8 +34,14 @@ def vp_start_gui():
 
     # Set Bindings for updates
     top.SaveButton.bind('<ButtonRelease-1>', update)
+    top.TXDataFileButton.bind('<ButtonRelease-1>', pickFile)
 
     w.protocol("WM_DELETE_WINDOW", root.quit)
+
+def pickFile(evnt):
+    file_path = fileDialog.askopenfilename()
+    PlutoConfig_support.txDataFile.set(file_path)
+    
 
 def addGUIContent():
     gainMode = tk.StringVar()
@@ -73,14 +82,14 @@ def update(evnt):
     PlutoController.getSdr().rx_bandwidth = float(PlutoConfig_support.rxBandwidth.get())
     PlutoController.getSdr().rx_lo_freq = float(PlutoConfig_support.rxFrequency.get())
     # TODO update decimation
-    # TODO update gain
+    PlutoController.getSdr().rx_gain = float(PlutoConfig_support.rxGain.get())
     
     # Update PlutoSDR using TX Frame information
     PlutoController.getSdr().tx_lo_freq = float(PlutoConfig_support.txFrequency.get())
     PlutoController.getSdr().tx_bandwidth = float(PlutoConfig_support.txBandwidth.get())
     PlutoController.txSamples = int(PlutoConfig_support.txSamples.get())
     # TODO update interpolation
-    # TODO update gain
+    PlutoController.getSdr().tx_gain = float(PlutoConfig_support.txGain.get())
 
     updateGUI()
 
