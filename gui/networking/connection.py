@@ -1,0 +1,2 @@
+class PointToPoint:
+    pass
