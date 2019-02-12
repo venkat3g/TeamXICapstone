@@ -6,6 +6,7 @@ import numpy as np
 from pluto import fir_tools
 import scipy.signal as signal
 import scipy.fftpack as fftpack
+from modulation.Modulation import ModulationFactory
 
 
 _sdr = None
@@ -21,7 +22,7 @@ rxPlotIndex = 2
 txSamples = 2**15
 txDataFile = ""
 txPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
-txPlotIndex = 0
+txPlotIndex = 2
 
 def getSdr():
     """
@@ -68,8 +69,22 @@ def writeXSamples(x):
         x: type=int
             the number of samples to write
     """
-    N = x
+    raw = False
 
+    # iq = generateRandomWaveform(x)
+    # raw = True
+
+    scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
+
+    msg = "hello world"
+    iq = scheme.symbolMap(msg, raw)
+
+    _sdr.writeTx(iq)
+
+    return _sdr.raw2complex(iq)
+
+def generateRandomWaveform(x):
+    N = x
 
     fc = _sdr.tx_lo_freq
     ts = 1/float(_sdr.sampling_frequency * 1e6)
@@ -83,9 +98,7 @@ def writeXSamples(x):
     iq[1::2] = q
     iq = np.int16(iq)
 
-    _sdr.writeTx(iq, True)
-
-    return _sdr.raw2complex(iq)
+    return iq
 
 def writeXComplexSamples(x):
     """

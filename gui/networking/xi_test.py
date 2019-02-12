@@ -49,9 +49,6 @@ class TestXIPacket(unittest.TestCase):
         packet1 = xi.XIPacket()
         packet2 = xi.XIPacket()
 
-        # the packet length should equal the size of the packet header
-        self.assertEqual(packet1.length, packet1.header.length)
-
         # two empty packets should have the same size
         self.assertEqual(packet1.length, packet2.length)
 
@@ -65,7 +62,21 @@ class TestXIPacket(unittest.TestCase):
 
         self.assertEqual(len(packet1.payload), payloadLength)
         self.assertEqual(packet1.header.payloadLength, payloadLength)
-        self.assertEqual(packet1.length, packet1.header.length + packet1.header.payloadLength)
+        self.assertGreaterEqual(packet1.crc, -256)
+        self.assertLessEqual(packet1.crc, 255)
+
+        self.assertGreaterEqual(packet1.header.crc, -256)
+        self.assertLessEqual(packet1.header.crc, 255)
+
+    def test_crc(self):
+        payloadLength = 1000
+        packet1 = xi.XIPacket(buffer=[x % 0xFF for x in range(payloadLength)])
+        packet2 = xi.XIPacket(buffer=[x % 0xFF for x in range(payloadLength)])
+
+        self.assertEqual(packet1.header.payloadLength, packet2.header.payloadLength)
+        self.assertEqual(packet1.header.crc, packet2.header.crc)
+        self.assertEqual(packet1.crc, packet2.crc)
+
 
     def test_packet_w_invalid_buffer(self):
         payloadLength = 1000

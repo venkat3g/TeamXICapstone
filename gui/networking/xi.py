@@ -15,7 +15,7 @@ class XIPacketHeader(object):
     Definition
     -----------
 
-    TYPE (2 bits) | Payload Length (14 bits) | CRC (8 bits)
+    HEADER (1B) - 0x01 | TYPE (2 bits) | Payload Length (14 bits) | CRC (8 bits)
 
     """
 
@@ -29,6 +29,8 @@ class XIPacketHeader(object):
             payloadLength: type=int
                 length of packet payload
         """
+        self.header = 0x01 # 1 byte
+        self._header_bit_length = 8
         self.type = type # 2 bits
         self._type_bit_length = 2
         self.payloadLength = payloadLength # 14 bits
@@ -43,7 +45,8 @@ class XIPacketHeader(object):
         '''
         Gets length in bytes
         '''
-        length_in_bits = self._crc_bit_length + self._payload_length_bit_length + self._type_bit_length
+        length_in_bits = self._header_bit_length + self._crc_bit_length \
+                        + self._payload_length_bit_length + self._type_bit_length
 
         return length_in_bits / 8
 
@@ -68,13 +71,30 @@ class XIPacket(object):
 
     Using XIPacketHeader:
 
-    Packet Header (3B) | Payload (Max 16KB)
+    Packet Header (3B) | Payload (Max 16KB) | CRC (1B) | Packet Footer 0x13 (1B)
 
     """
     def __init__(self, buffer=[]):
 
         self.header = XIPacketHeader(payloadLength=len(buffer))
         self.payload = bytearray(buffer) # create a buffer of bytes for the payload
-        self.length = self.header.length + self.header.payloadLength # length is just the header + packet
+        self.crc = 0
+
+        self.updateCRC()
+    
+    def updateCRC(self):
+        self.crc = 0xff
+
+        # sum all bytes
+        for b in self.payload:
+            self.crc += int(b)
+        
+        self.crc = ~(self.crc % 0xFF) # fit the crc in a byte then perform one's complement
+
+    def _get_length(self):
+        # 2 bytes at the end, 1 for the CRC and 1 for 0x13 packet footer
+        return self.header.length + self.header.payloadLength + 2 
+
+    length = property(_get_length)
 
     
