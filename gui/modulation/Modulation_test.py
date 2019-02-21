@@ -80,27 +80,29 @@ class TestQPSK(unittest.TestCase):
 
     def test_timing(self):
         scheme = ModulationFactory.chooseScheme('qpsk')
-        largeMsg = ['x' for x in range(int(2**12))]
+        largeMsg = ['x' for x in range(int(2**10))]
         largerMsg = ['x' for x in range(int(2**14))]
 
+        fc = 2.2e9
+        fs = 3e6
 
         start = timer()
-        tx_buf = scheme.symbolMap(largeMsg)
+        tx_buf = scheme.modulateData(fc, fs, largeMsg)
         end = timer()
         print("Large tx buffer creation time: %fus" % ((end - start) * 1e6))
 
         start = timer()
-        tx_buf2 = scheme.symbolMap(largerMsg)
+        tx_buf2 = scheme.modulateData(fc, fs, largerMsg)
         end = timer()
         print("Very large tx buffer creation time: %fus" % ((end - start) * 1e6))
 
         start = timer()
-        rx_rec_msg = scheme.symbolDemap(tx_buf)
+        rx_rec_msg = scheme.demodulateData(fc, fs, tx_buf)
         end = timer()
         print("Large rx buffer read time: %fus" % ((end - start) * 1e6))
         
         start = timer()
-        rx_rec_msg2 = scheme.symbolDemap(tx_buf2)
+        rx_rec_msg2 = scheme.demodulateData(fc, fs, tx_buf2)
         end = timer()
         print("Very large rx buffer read time: %fus" % ((end - start) * 1e6))
 
