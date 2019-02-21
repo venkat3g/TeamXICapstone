@@ -209,7 +209,7 @@ class Modulation:
             plt.show()
 
         # undo symbol mapping
-        strOut = self.symbolDemap(syncData, False)
+        strOut = self.symbolDemap(syncData[:len(syncData) - (len(syncData) % 8)], False)
         return "".join([chr(c) for c in strOut])
     
     def symbolMap(self, data, raw=False):
