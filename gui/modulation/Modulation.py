@@ -1,4 +1,6 @@
 import numpy as np
+from filter import srrc
+import matplotlib.pyplot as plt
 
 def complex2raw(data, no_bits=16):
     iq = np.round((2**(no_bits-1))*np.array(data).view(np.float64)).astype(np.int16)
@@ -15,12 +17,208 @@ def raw2complex(data):
     return iq.view(np.complex128)
 
 class Modulation:
-    def modulateData(self, data):
+
+    @staticmethod
+    def _upsample(a, P, dtype):
+        """
+        Upsample a given array using the given oversampling factor
+        
+        Parameters
+        ----------
+        a : list
+            array of data to upsample
+        P : int
+            factor to oversample by
+        dtype:
+            type of data
+        """
+        aup = np.zeros(len(a) * P, dtype=dtype)
+        _index_a = 0
+        for x in range(0, len(aup), P):
+            aup[x] = a[_index_a]
+            _index_a += 1
+
+        return aup
+    
+    def pulseShapingFilter(self, D, alpha, P):
+        """
+        Generates a pulse shaping filter for our modulation.
+        This can be overridden by child classes.
+        Parameters
+        ----------
+        D : int
+            Half-length of the pulse
+        alpha : float
+            Roll off factor (Valid values are [0, 1]).
+        P : int
+            Oversampling factor (how many samples in-between - 1)
+
+        Returns
+        ---------
+        1-D ndarray of floats
+        """
+        return srrc(D, alpha, P)
+
+    def _get_pilot_sequence(self):
+        # Pilot Sequence - Barker code
+        return [1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1]
+
+    def _pilot_upsample(self):
+        return Modulation._upsample(self.pilot_sequence, self.P, float)
+
+    pilot_sequence = property(_get_pilot_sequence)
+    _pilot_upsample = property(_pilot_upsample)
+
+    _P = 110
+    _D = 4
+    _alpha = 0.1
+
+    def _get_P(self):
+        return self._P
+
+    def _get_D(self):
+        return self._D
+
+    def _get_alpha(self):
+        return self._alpha
+    
+    def _set_P(self, value):
+        self._P = value
+
+    def _set_D(self, value):
+        self._D = value
+
+    def _set_alpha(self, value):
+        self._alpha = value
+
+    P = property(_get_P, _set_P)
+    D = property(_get_D, _set_D)
+    alpha = property(_get_alpha, _set_alpha)
+
+    def modulateData(self, fc, fs, data):
+        """
+        Modulates the given data for a given frequency center and sampling frequency.
+
+        Parameeters
+        -------------
+        fc : int
+            center frequency (Hz)
+        fs : int
+            sampling freqency (Hz or SPS)
+        data : str
+            data represented as a string
+        Returns
+        --------
+        1-D ndarray of floats
+        """
+        Ts = 1.0 / fs
+
+        # Get Pulse Shaping Filter
+        
+        g = self.pulseShapingFilter(self.D, self.alpha, self.P)
+
+        _pilots = self.pilot_sequence # alias
+
+        # symbol mapping
+        symbols = self.symbolMap(data, False)
+
+        # create packet by concatenating pilots with data
+        packet = list(_pilots)
+        packet.extend(symbols)
+
+        # upsample packet
+        packetup = Modulation._upsample(packet, self.P, complex)
+
+        # convolve packetup with pulse shaping filter g
+        m = np.convolve(packetup, g)
+
+        # modulate message
+        t_s = np.arange(0, len(m) * Ts, Ts)
+        s = np.array([(m[i] * np.exp(1.j * 2 * np.pi * fc * t_s[i])).real for i in range(len(m))])
+
+        return s
+    
+    def demodulateData(self, fc, fs, rxData, showConstellation=False):
+        """
+        Demodulates the given data for a given frequency center and sampling frequency.
+
+        Parameeters
+        -------------
+        fc : int
+            center frequency (Hz)
+        fs : int
+            sampling freqency (Hz or SPS)
+        rxData : list
+            raw data received from rx
+        Returns
+        --------
+        string representation of data
+        """
+        Ts = 1.0 / fs
+        _pilots = self.pilot_sequence # alias
+        g = self.pulseShapingFilter(self.D, self.alpha, self.P)
+
+        # upsample _pilots
+        a = list(_pilots) # copy list
+        aup = self._pilot_upsample # alias
+        
+        fOff = 7 # frequency offset of oscillator
+        phiOff = 0.4 # phase offset of oscillator
+
+        # demodulate w/ freq and phase offset
+        t_v = np.arange(0, len(rxData) * Ts, Ts)
+        v = 2*rxData*np.exp(-1.j*(2*np.pi*(fc+fOff)*t_v+phiOff))
+
+        # convolve demodulated signal with pulse shaping filter
+        yup = np.convolve(v, g)
+
+        # time framing sync using correlation
+        timingTest = np.convolve(yup, np.flip(aup))
+        absTimingTest = np.abs(timingTest)
+        peakMag = absTimingTest.max()
+        peakIndex = np.argmax(absTimingTest)
+
+        # index of first pilot symbol
+        t0 = peakIndex - len(aup) + 1
+
+        # get pilots and data from upsampled y
+        y = yup[t0:t0 + (len(yup) - len(aup)) - 1:self.P] # TODO not sure is always true
+        yPilots = y[0:len(_pilots)]
+        yData = y[len(_pilots):]
+        
+        # freq and phase error correction
+        phaseError = np.unwrap(np.angle(yPilots / a))
+        lineFit = np.polyfit(range(len(_pilots)), phaseError, 1)
+        slope = lineFit[0]
+        intercept = lineFit[1]
+        line = slope*np.arange(len(_pilots))+intercept
+
+        # Freq and Phase Offsets
+        T = self.P / fs
+        f0 = -slope / (2 * np.pi * T) # T or Ts?
+        phi = -1 * intercept
+        phideg = phi * 180.0 / np.pi
+
+        # Correct for freq and phase offset
+        n = np.arange(len(_pilots), (len(yData) + len(_pilots))) # TODO not sure this is always true
+        syncData = yData * np.exp(-1.j * (slope * n + intercept))
+
+        # final constellation
+        if showConstellation:
+            plt.scatter(syncData.real, syncData.imag)
+            plt.show()
+
+        # undo symbol mapping
+        strOut = self.symbolDemap(syncData, False)
+        return "".join([chr(c) for c in strOut])
+    
+    def symbolMap(self, data, raw=False):
+        raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
+    
+    def symbolDemap(self, symbols, raw=False):
         raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
 
-    def demodulateData(self, rxData):
-        raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
-
+ 
 class _BPSK(Modulation):
     '''
     BPSK Modulation implementation.
@@ -38,7 +236,7 @@ class _QPSK(Modulation):
     '''
     QPSK Modulation implementation.
     '''
-    def symbolMap(self, data, raw=True):
+    def symbolMap(self, data, raw=False):
         binaryRep = _get_binary_rep(data)
         a1 = _split_by(binaryRep, 2)
 
@@ -46,7 +244,7 @@ class _QPSK(Modulation):
 
         return complex2raw(a2) if raw else np.array(a2)
 
-    def symbolDemap(self, rxData, raw=True):
+    def symbolDemap(self, rxData, raw=False):
         data = raw2complex(rxData) if raw else rxData
 
         # take complex data and group it into

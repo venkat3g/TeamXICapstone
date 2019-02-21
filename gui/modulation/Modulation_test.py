@@ -1,6 +1,7 @@
 import unittest
 from timeit import default_timer as timer
 from Modulation import *
+import filter as f
 
 class TestModulationFactory(unittest.TestCase):
     def test_init(self):
@@ -126,6 +127,44 @@ class TestQPSK(unittest.TestCase):
         self.assertNotEqual(rx_constructed_msg, rx_constructed_msg2)
         self.assertNotEqual(rx_constructed_msg, msg2)
         self.assertNotEqual(rx_constructed_msg2, msg)
+
+    def test_data_modulation(self):
+        scheme = ModulationFactory.chooseScheme('qpsk')
+        msg = "hello world!"
+        msg2 = "abc"
+        fc = 12000
+        fs = 44100
+
+        mod1 = scheme.modulateData(fc, fs, msg)
+        mod2 = scheme.modulateData(fc, fs, msg)
+        mod3 = scheme.modulateData(fc, fs, msg2)
+
+        self.assertTrue(np.array_equal(mod1, mod2))
+        self.assertFalse(np.array_equal(mod1, mod3))
+        self.assertFalse(np.array_equal(mod2, mod3))
+    
+    def test_data_modulation_demodulation(self):
+        scheme = ModulationFactory.chooseScheme('qpsk')
+        msg = "hello world!"
+        msg2 = "abcd"
+        fc = 12000
+        fs = 44100
+
+        mod1 = scheme.modulateData(fc, fs, msg)
+        mod2 = scheme.modulateData(fc, fs, msg)
+        mod3 = scheme.modulateData(fc, fs, msg2)
+
+        demod1 = scheme.demodulateData(fc, fs, mod1)
+        demod2 = scheme.demodulateData(fc, fs, mod2)
+        demod3 = scheme.demodulateData(fc, fs, mod3)
+
+        self.assertEqual(msg, demod1)
+        self.assertEqual(msg, demod2)
+        self.assertEqual(msg2, demod3)
+
+class TestSRRC(unittest.TestCase):
+    def test(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()
