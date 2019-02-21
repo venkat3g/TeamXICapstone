@@ -99,7 +99,7 @@ def animate(i):
                         xs = [x.real for x in rxData]
                         ys = [x.imag for x in rxData]
 
-                        ax1.axis([-1, 1, -1, 1])
+                        # ax1.axis([-1, 1, -1, 1])
                         ax1.plot(xs, ys, 'o')
 
         if txData is not None:
@@ -119,6 +119,6 @@ def animate(i):
                         xs = [x.real for x in txData]
                         ys = [x.imag for x in txData]
 
-                        ax2.axis([-1, 1, -1, 1])
+                        # ax2.axis([-1, 1, -1, 1])
                         ax2.plot(xs, ys, 'o')
 
