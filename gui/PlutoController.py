@@ -11,6 +11,8 @@ from modulation.Modulation import ModulationFactory
 
 _sdr = None
 
+_scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
+
 threadPeriod = 5
 
 rxSamples = 2**16
@@ -74,14 +76,14 @@ def writeXSamples(x):
     # iq = generateRandomWaveform(x)
     # raw = True
 
-    scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
+    
 
     msg = "hello world"
-    iq = scheme.symbolMap(msg, raw)
+    iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, msg)
 
-    _sdr.writeTx(iq)
+    _sdr.writeTx(iq, raw)
 
-    return _sdr.raw2complex(iq)
+    return _sdr.raw2complex(iq) if raw else iq
 
 def generateRandomWaveform(x):
     N = x
