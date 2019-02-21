@@ -100,22 +100,6 @@ def generateRandomWaveform(x):
 
     return iq
 
-def writeXComplexSamples(x):
-    """
-    Write 0 to X complex samples to TX
-
-    parameters:
-        x: type=int
-            the number of samples to write
-    """
-    buf = bytearray()
-    for x in range(rxSamples * 128 / 8):
-        buf.append(0)
-
-    iq = np.frombuffer(buf, np.complex128)
-
-    _sdr.writeTx(iq, False)
-
 def readComplexRX():
     """
     Read Imaginary and Complex RX data
