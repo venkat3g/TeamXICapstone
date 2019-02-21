@@ -132,11 +132,11 @@ class Modulation:
         # convolve packetup with pulse shaping filter g
         m = np.convolve(packetup, g)
 
-        # modulate message
-        t_s = np.arange(0, len(m) * Ts, Ts)
-        s = np.array([(m[i] * np.exp(1.j * 2 * np.pi * fc * t_s[i])).real for i in range(len(m))])
+        # modulate message TODO come back to, apparently this is handled by hardware
+        # t_s = np.arange(0, len(m) * Ts, Ts)
+        # s = np.array([(m[i] * np.exp(1.j * 2 * np.pi * fc * t_s[i])).real for i in range(len(m))])
 
-        return s
+        return m
     
     def demodulateData(self, fc, fs, rxData, showConstellation=False):
         """
@@ -162,15 +162,16 @@ class Modulation:
         a = list(_pilots) # copy list
         aup = self._pilot_upsample # alias
         
-        fOff = 7 # frequency offset of oscillator
-        phiOff = 0.4 # phase offset of oscillator
+        # TODO revisit hardware should handle this demodulation stage.... apparently
+        # fOff = 7 # frequency offset of oscillator
+        # phiOff = 0.4 # phase offset of oscillator
 
-        # demodulate w/ freq and phase offset
-        t_v = np.arange(0, len(rxData) * Ts, Ts)
-        v = 2*rxData*np.exp(-1.j*(2*np.pi*(fc+fOff)*t_v+phiOff))
+        # # demodulate w/ freq and phase offset
+        # t_v = np.arange(0, len(rxData) * Ts, Ts)
+        # v = 2*rxData*np.exp(-1.j*(2*np.pi*(fc+fOff)*t_v+phiOff))
 
         # convolve demodulated signal with pulse shaping filter
-        yup = np.convolve(v, g)
+        yup = np.convolve(rxData, g)
 
         # time framing sync using correlation
         timingTest = np.convolve(yup, np.flip(aup))
