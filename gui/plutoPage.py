@@ -67,6 +67,11 @@ def addGUIContent():
     gainMode.trace("w", lambda *args: PlutoController.updateGainMode(gainMode.get().upper()))
     rxPlot.trace("w", lambda *args: PlutoController.updateRXPlot(rxPlot.get()))
     txPlot.trace("w", lambda *args: PlutoController.updateTXPlot(txPlot.get()))
+    
+    # add bindings for checkboxes
+    PlutoConfig_support.rxImaginary.trace('w', lambda *args: PlutoController.updateRXImaginary(PlutoConfig_support.rxImaginary.get()))
+    PlutoConfig_support.txImaginary.trace('w', lambda *args: PlutoController.updateTXImaginary(PlutoConfig_support.txImaginary.get()))
+    
 
 def update(evnt):
 
@@ -112,6 +117,9 @@ def updateGUI():
     PlutoConfig_support.txGain.set(PlutoController.getSdr().tx_gain)
     PlutoConfig_support.txDataFile.set(PlutoController.txDataFile)
     PlutoConfig_support.txSamples.set(PlutoController.txSamples)
+
+    PlutoConfig_support.rxImaginary.set(PlutoController.getRXImaginary())
+    PlutoConfig_support.txImaginary.set(PlutoController.getTXImaginary())
     
 
 def loadGUIItems():

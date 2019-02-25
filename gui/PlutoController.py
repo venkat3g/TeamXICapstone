@@ -16,7 +16,7 @@ _scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
 threadPeriod = 5
 
 rxSamples = 2**16
-rxGainModeIndex =  1
+rxGainModeIndex =  0
 rxGainModes = ["manual", "slow_attack", "fast_attack", "hybrid"]
 rxPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
 rxPlotIndex = 2
@@ -136,6 +136,18 @@ def plutoRXThread(args):
 
         time.sleep(threadPeriod)
 
+
+def updateRXImaginary(value):
+    testPlot.rxImaginary = value == '1'
+
+def updateTXImaginary(value):
+    testPlot.txImaginary = value == '1'
+
+def getRXImaginary():
+    return '1' if testPlot.rxImaginary else '0'
+
+def getTXImaginary():
+    return '1' if testPlot.txImaginary else '0'
 
 def updateGainMode(value):
     _sdr.rx_gain_mode = value

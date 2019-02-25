@@ -18,6 +18,8 @@ txData = None
 plot_fir = False
 freq_dom = False
 compl = False
+rxImaginary = False
+txImaginary = False
 PLOT_COLOURS = ('b', 'r')
 
 def get_animation_period():
@@ -87,7 +89,8 @@ def animate(i):
                 if PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Time':
                         rawRXData = PlutoController.getSdr().complex2raw(rxData, 16)
                         ax1.plot(rawRXData[0::2], PLOT_COLOURS[1])
-                        ax1.plot(rawRXData[1::2])
+                        if rxImaginary:
+                                ax1.plot(rawRXData[1::2])
 
                 elif PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Frequency':
                         xs = [x.real for x in rxData]
@@ -107,7 +110,8 @@ def animate(i):
                 if PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Time':
                         rawTXData = PlutoController.getSdr().complex2raw(txData, 16)
                         ax2.plot(rawTXData[0::2], PLOT_COLOURS[1])
-                        ax2.plot(rawTXData[1::2])
+                        if txImaginary:
+                                ax2.plot(rawTXData[1::2])
 
                 elif PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Frequency':
                         xs = [x.real for x in txData]
