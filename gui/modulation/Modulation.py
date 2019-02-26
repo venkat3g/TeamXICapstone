@@ -218,13 +218,21 @@ class _BPSK(Modulation):
     '''
     BPSK Modulation implementation.
     '''
-    def symbolMap(self, data):
+    def symbolMap(self, data, raw=False):
         
         binaryRep = _get_binary_rep(data)
         
-        a = [(int(x) * 2 - 1)+ 0.j for x in binaryRep]
+        symbols = [(int(x) * 2 - 1)+ 0.j for x in binaryRep]
 
-        return complex2raw(a)
+        return symbols
+
+    def symbolDemap(self, rxData, raw=False):
+        bits = [str(1 if v.real > 0 else 0) for v in rxData]
+        binaryRep = "".join(bits)
+
+        bytes_grouping = [ int(x, 2) for x in _split_by(binaryRep, 8)]
+
+        return bytes_grouping
 
 
 class _QPSK(Modulation):
