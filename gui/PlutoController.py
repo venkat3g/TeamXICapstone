@@ -69,21 +69,19 @@ def configure(frequency, sampling_frequency):
     _sdr.rx_lo_freq = frequency
     _sdr.sampling_frequency = sampling_frequency
 
-def writeXSamples(x):
+def writeXSamples():
     """
     Write 0 to X bytes to TX
-
-    parameters:
-        x: type=int
-            the number of samples to write
     """
-    global _msg
+    global _msg, _msg_sent
     raw = False
 
     msg = _msg
     iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, msg)
 
     _sdr.writeTx(iq, raw)
+    
+    _msg_sent = True
 
     return _sdr.raw2complex(iq) if raw else iq
 
@@ -124,7 +122,7 @@ def readRawRX():
     return rxData
 
 def plutoRXThread(args):
-    global _sdr, rxSamples
+    global _sdr, rxSamples, _msg_sent
     while not args['done']:
 
         if not _msg_sent and getTXStatus():
@@ -188,7 +186,7 @@ def updateModScheme(value):
         _scheme.alpha = _alpha
 
 def updatePulseShapingFilter(D, P, alpha):
-    global _D, _P, _alpha
+    global _D, _P, _alpha, _msg_sent
     _D = D
     _P = P
     _alpha = alpha
@@ -196,6 +194,7 @@ def updatePulseShapingFilter(D, P, alpha):
     _scheme.D = _D
     _scheme.P = _P
     _scheme.alpha = _alpha
+    _msg_sent = False # Message must be resent with new values
 
 def getPulseShapingValues():
     global _D, _P, _alpha
