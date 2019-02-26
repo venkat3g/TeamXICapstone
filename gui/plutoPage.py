@@ -63,10 +63,18 @@ def addGUIContent():
     TXPlotOptionMenu = apply(tk.OptionMenu, (top.TXPlotFrame, txPlot) + tuple(PlutoController.txPlotList))
     TXPlotOptionMenu.pack()
 
+    # Modulation Scheme Drop-down
+    modScheme = tk.StringVar()
+    modScheme.set(PlutoController.ModulationFactory.QAM)
+    
+    popupMenu = tk.OptionMenu(top.ModulationSchemeFrame, modScheme, *PlutoController.ModulationFactory.SUPPORTED_SCHEMES)
+    popupMenu.place(relx=0.5, rely=0.25)
+
     # Set Bindings for updates
     gainMode.trace("w", lambda *args: PlutoController.updateGainMode(gainMode.get().upper()))
     rxPlot.trace("w", lambda *args: PlutoController.updateRXPlot(rxPlot.get()))
     txPlot.trace("w", lambda *args: PlutoController.updateTXPlot(txPlot.get()))
+    modScheme.trace("w", lambda *args: PlutoController.updateModScheme(modScheme.get()))
     
     # add bindings for checkboxes
     PlutoConfig_support.rxImaginary.trace('w', lambda *args: PlutoController.updateRXImaginary(PlutoConfig_support.rxImaginary.get()))

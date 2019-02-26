@@ -15,7 +15,7 @@ _scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
 
 threadPeriod = 5
 
-rxSamples = 2**16
+rxSamples = 2**14
 rxGainModeIndex =  0
 rxGainModes = ["manual", "slow_attack", "fast_attack", "hybrid"]
 rxPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
@@ -159,3 +159,7 @@ def updateRXPlot(value):
 def updateTXPlot(value):
     global txPlotIndex
     txPlotIndex = txPlotList.index(value)
+
+def updateModScheme(value):
+    global _scheme
+    _scheme = ModulationFactory.chooseScheme(value)
