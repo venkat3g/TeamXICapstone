@@ -15,9 +15,6 @@ _animation_period = 10000
 playing = True
 rxData = None
 txData = None
-plot_fir = False
-freq_dom = False
-compl = False
 rxImaginary = False
 txImaginary = False
 PLOT_COLOURS = ('b', 'r')
@@ -54,36 +51,12 @@ def setupCanvas():
         plt.show()
         fig.canvas.mpl_connect('close_event', handle_close)
 
-def fir_plot(rxData, a=1, grid=True, phase=False):
-        """
-        Plots FIR
-        """
-        global fig, ax1, ani
-        w, h = sig.freqz(rxData, a)
-        w_norm = w/max(w)
-        ax1.plot(w_norm, 20*np.log10(np.abs(h)), PLOT_COLOURS[0])
-        plt.title('FIR Frequency Response')
-        plt.xlabel('Normalised Frequency [rads/sample]')
-        plt.ylabel('Amplidude [dB]', color=PLOT_COLOURS[0])
-        if phase:
-                ax2 = ax1.twinx()
-                rads = np.unwrap(np.angle(h))
-                ax1.plot(w_norm, rads, PLOT_COLOURS[1])
-                plt.ylabel('Phase [rads/sample]', color=PLOT_COLOURS[1])
-        if grid:
-                plt.grid()
-        #plt.axis('tight')
-        # plt.show()
-
 def animate(i):
         global fig, ax1, ax2, xs, ys
         ax1.clear()
         ax2.clear()
         ani.event_source.interval = _animation_period
         
-        if plot_fir and rxData is not None:
-                fir_plot(rxData)
-
         if rxData is not None:
                 ax1.set_title("Receiving")
                 if PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Time':
@@ -93,10 +66,11 @@ def animate(i):
                                 ax1.plot(rawRXData[1::2])
 
                 elif PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Frequency':
-                        xs = [x.real for x in rxData]
-                        ys = [x.imag for x in rxData]
-
-                        ax1.semilogy(xs, ys)
+                        w, h = sig.freqz(rxData, fs=PlutoController.getSdr().sampling_frequency)
+                        
+                        ax1.plot(w, 20*np.log10(np.abs(h)), PLOT_COLOURS[1])
+                        ax1.set_xlabel('Frequency [MHz]')
+                        ax1.set_ylabel('Amplidude [dB]')
 
                 elif PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Constellation (X vs Y)':
                         xs = [x.real for x in rxData]
@@ -114,10 +88,11 @@ def animate(i):
                                 ax2.plot(rawTXData[1::2])
 
                 elif PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Frequency':
-                        xs = [x.real for x in txData]
-                        ys = [x.imag for x in txData]
-
-                        ax2.semilogy(xs, ys)
+                        w, h = sig.freqz(txData, fs=PlutoController.getSdr().sampling_frequency)
+                        
+                        ax2.plot(w, 20*np.log10(np.abs(h)), PLOT_COLOURS[1])
+                        ax2.set_xlabel('Frequency [MHz]')
+                        ax2.set_ylabel('Amplidude [dB]')
 
                 elif PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Constellation (X vs Y)':
                         xs = [x.real for x in txData]
