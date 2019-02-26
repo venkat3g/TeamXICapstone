@@ -241,11 +241,11 @@ class _QPSK(Modulation):
     '''
     def symbolMap(self, data, raw=False):
         binaryRep = _get_binary_rep(data)
-        a1 = _split_by(binaryRep, 2)
+        groupedBits = _split_by(binaryRep, 2)
 
-        a2 = _QPSK._fit_into_quads(a1)
+        symbols = _QPSK._fit_into_quads(groupedBits)
 
-        return complex2raw(a2) if raw else np.array(a2)
+        return complex2raw(symbols) if raw else np.array(symbols)
 
     def symbolDemap(self, rxData, raw=False):
         data = raw2complex(rxData) if raw else rxData
