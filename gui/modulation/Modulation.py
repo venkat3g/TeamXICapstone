@@ -1,6 +1,7 @@
 import numpy as np
 from filter import srrc
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from scipy import signal as sig
 
 def complex2raw(data, no_bits=16):
@@ -70,9 +71,9 @@ class Modulation:
     pilot_sequence = property(_get_pilot_sequence)
     _pilot_upsample = property(_pilot_upsample)
 
-    _P = 110
+    _P = 30
     _D = 4
-    _alpha = 0.1
+    _alpha = 0.3
 
     def _get_P(self):
         return self._P
@@ -132,7 +133,7 @@ class Modulation:
         
         return m
     
-    def demodulateData(self, fc, fs, rxData, showConstellation=False):
+    def demodulateData(self, fc, fs, rxData, showFinalConstellation=False, showAllPlots=False):
         """
         Demodulates the given data for a given frequency center and sampling frequency.
 
@@ -156,14 +157,6 @@ class Modulation:
         a = list(_pilots) # copy list
         aup = self._pilot_upsample # alias
         
-        # TODO revisit hardware should handle this demodulation stage.... apparently
-        # fOff = 7 # frequency offset of oscillator
-        # phiOff = 0.4 # phase offset of oscillator
-
-        # # demodulate w/ freq and phase offset
-        # t_v = np.arange(0, len(rxData) * Ts, Ts)
-        # v = 2*rxData*np.exp(-1.j*(2*np.pi*(fc+fOff)*t_v+phiOff))
-
         # convolve demodulated signal with pulse shaping filter
         yup = sig.convolve(rxData, g)
         
@@ -172,6 +165,11 @@ class Modulation:
         absTimingTest = np.abs(timingTest)
         peakMag = absTimingTest.max()
         peakIndex = np.argmax(absTimingTest)
+        if showAllPlots:
+            timingFigure = plt.figure()
+            ax = timingFigure.add_subplot(111)
+            ax.scatter(range(len(timingTest)), np.abs(timingTest))
+            ax.set_title('Timing Figure')
 
         # index of first pilot symbol
         t0 = peakIndex - len(aup) + 1
@@ -180,32 +178,51 @@ class Modulation:
         y = yup[t0:t0 + (len(yup) - len(aup)) - 1:self.P] # TODO not sure is always true
         yPilots = y[0:len(_pilots)]
         yData = y[len(_pilots):]
+        if showAllPlots:
+            initConstFig = plt.figure()
+            ax = initConstFig.add_subplot(111, projection='3d')
+            ax.scatter(yData.real, range(len(yData)), yData.imag)
+            ax.set_title('Initial Constellation')
         
         # freq and phase error correction
-        phaseError = np.unwrap(np.angle(yPilots / a))
-        lineFit = np.polyfit(range(len(_pilots)), phaseError, 1)
-        slope = lineFit[0]
-        intercept = lineFit[1]
-        line = slope*np.arange(len(_pilots))+intercept
+        if len(yPilots) != len(a):
+            return ""
+        else:
+            phaseError = np.unwrap(np.angle(yPilots / a))
+            lineFit = np.polyfit(range(len(_pilots)), phaseError, 1)
+            slope = lineFit[0]
+            intercept = lineFit[1]
+            line = slope*np.arange(len(_pilots))+intercept
+            if showAllPlots:
+                phaseErrorPlot = plt.figure()
+                ax = phaseErrorPlot.add_subplot(111)
+                ax.plot(range(0, len(_pilots)), line)
+                ax.scatter(range(0, len(_pilots)), phaseError)
+                ax.set_title('Phase Error')
 
-        # Freq and Phase Offsets
-        T = self.P / fs
-        f0 = -slope / (2 * np.pi * T) # T or Ts?
-        phi = -1 * intercept
-        phideg = phi * 180.0 / np.pi
+            # Freq and Phase Offsets
+            T = self.P / fs
+            f0 = -slope / (2 * np.pi * T) # T or Ts?
+            phi = -1 * intercept
+            phideg = phi * 180.0 / np.pi
 
-        # Correct for freq and phase offset
-        n = np.arange(len(_pilots), (len(yData) + len(_pilots))) # TODO not sure this is always true
-        syncData = yData * np.exp(-1.j * (slope * n + intercept))
+            # Correct for freq and phase offset
+            n = np.arange(len(_pilots), (len(yData) + len(_pilots))) # TODO not sure this is always true
+            syncData = yData * np.exp(-1.j * (slope * n + intercept))
 
-        # final constellation
-        if showConstellation:
-            plt.scatter(syncData.real, syncData.imag)
-            plt.show()
+            # undo symbol mapping
+            strOut = self.symbolDemap(syncData[:len(syncData) - (len(syncData) % 8)], False)
+            strOut = "".join([chr(c) for c in strOut])
 
-        # undo symbol mapping
-        strOut = self.symbolDemap(syncData[:len(syncData) - (len(syncData) % 8)], False)
-        return "".join([chr(c) for c in strOut])
+            # final constellation
+            if showFinalConstellation or showAllPlots:
+                constellationFigure = plt.figure()
+                ax = constellationFigure.add_subplot(111, projection='3d')
+                ax.scatter(syncData.real, range(len(syncData)), syncData.imag)
+                ax.set_title('Final Constellation')
+                plt.show()
+
+            return strOut
     
     def symbolMap(self, data, raw=False):
         raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
