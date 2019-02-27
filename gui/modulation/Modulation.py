@@ -175,20 +175,29 @@ class Modulation:
         t0 = peakIndex - len(aup) + 1
 
         # get pilots and data from upsampled y
-        y = yup[t0:t0 + (len(yup) - len(aup)) - 1:self.P] # TODO not sure is always true
-        yPilots = y[0:len(_pilots)]
-        yData = y[len(_pilots):]
-        if showAllPlots:
-            initConstFig = plt.figure()
-            ax = initConstFig.add_subplot(111, projection='3d')
-            ax.scatter(yData.real, range(len(yData)), yData.imag)
-            ax.set_title('Initial Constellation')
+        yPilots, yData = self._get_pilot_data(yup, t0, showAllPlots=showAllPlots)
         
         # freq and phase error correction
-        if len(yPilots) != len(a):
+        strOut = self._freq_phase_error_correction(fs, yPilots, yData, showFinalConstellation=showFinalConstellation, showAllPlots=showAllPlots)
+
+        if showAllPlots or showFinalConstellation:
+            plt.show()
+
+        return strOut
+    
+    def symbolMap(self, data, raw=False):
+        raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
+    
+    def symbolDemap(self, symbols, raw=False):
+        raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
+
+    def _freq_phase_error_correction(self, fs, yPilots, yData, showFinalConstellation=False, showAllPlots=False):
+        _pilots = self.pilot_sequence # alias
+        
+        if len(yPilots) != len(_pilots):
             return ""
         else:
-            phaseError = np.unwrap(np.angle(yPilots / a))
+            phaseError = np.unwrap(np.angle(yPilots / _pilots))
             lineFit = np.polyfit(range(len(_pilots)), phaseError, 1)
             slope = lineFit[0]
             intercept = lineFit[1]
@@ -220,17 +229,24 @@ class Modulation:
                 ax = constellationFigure.add_subplot(111, projection='3d')
                 ax.scatter(syncData.real, range(len(syncData)), syncData.imag)
                 ax.set_title('Final Constellation')
-                plt.show()
 
             return strOut
-    
-    def symbolMap(self, data, raw=False):
-        raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
-    
-    def symbolDemap(self, symbols, raw=False):
-        raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
 
- 
+    def _get_pilot_data(self, yup, t0, showAllPlots=False):
+        _pilots = self.pilot_sequence # alias
+        aup = self._pilot_upsample # alias
+
+        y = yup[t0:t0 + (len(yup) - len(aup)) - 1:self.P] # TODO not sure is always true
+        yPilots = y[0:len(_pilots)]
+        yData = y[len(_pilots):]
+        if showAllPlots:
+            initConstFig = plt.figure()
+            ax = initConstFig.add_subplot(111, projection='3d')
+            ax.scatter(yData.real, range(len(yData)), yData.imag)
+            ax.set_title('Initial Constellation')
+        
+        return (yPilots, yData)
+
 class _BPSK(Modulation):
     '''
     BPSK Modulation implementation.
