@@ -1,6 +1,7 @@
 import numpy as np
 from filter import srrc
 import matplotlib.pyplot as plt
+from scipy import signal as sig
 
 def complex2raw(data, no_bits=16):
     iq = np.round((2**(no_bits-1))*np.array(data).view(np.float64)).astype(np.int16)
@@ -126,16 +127,9 @@ class Modulation:
         packet = list(_pilots)
         packet.extend(symbols)
 
-        # upsample packet
-        packetup = Modulation._upsample(packet, self.P, complex)
-
-        # convolve packetup with pulse shaping filter g
-        m = np.convolve(packetup, g)
-
-        # modulate message TODO come back to, apparently this is handled by hardware
-        # t_s = np.arange(0, len(m) * Ts, Ts)
-        # s = np.array([(m[i] * np.exp(1.j * 2 * np.pi * fc * t_s[i])).real for i in range(len(m))])
-
+        # upsample packet and convolve packetup with pulse shaping filter g
+        m = sig.upfirdn(g, packet, self.P)
+        
         return m
     
     def demodulateData(self, fc, fs, rxData, showConstellation=False):
@@ -171,10 +165,10 @@ class Modulation:
         # v = 2*rxData*np.exp(-1.j*(2*np.pi*(fc+fOff)*t_v+phiOff))
 
         # convolve demodulated signal with pulse shaping filter
-        yup = np.convolve(rxData, g)
-
+        yup = sig.convolve(rxData, g)
+        
         # time framing sync using correlation
-        timingTest = np.convolve(yup, np.flip(aup))
+        timingTest = sig.convolve(yup, np.flip(aup))
         absTimingTest = np.abs(timingTest)
         peakMag = absTimingTest.max()
         peakIndex = np.argmax(absTimingTest)
