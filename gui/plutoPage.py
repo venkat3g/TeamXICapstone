@@ -41,6 +41,7 @@ def vp_start_gui():
 def pickFile(evnt):
     file_path = fileDialog.askopenfilename()
     PlutoConfig_support.txDataFile.set(file_path)
+    PlutoController.updateMsgToSend(file_path)
     
 
 def addGUIContent():
@@ -79,6 +80,7 @@ def addGUIContent():
     # add bindings for checkboxes
     PlutoConfig_support.rxImaginary.trace('w', lambda *args: PlutoController.updateRXImaginary(PlutoConfig_support.rxImaginary.get()))
     PlutoConfig_support.txImaginary.trace('w', lambda *args: PlutoController.updateTXImaginary(PlutoConfig_support.txImaginary.get()))
+    PlutoConfig_support.txOn.trace('w', lambda *args: PlutoController.setTXStatus(PlutoConfig_support.txOn.get()))
     
 
 def update(evnt):
@@ -104,6 +106,12 @@ def update(evnt):
     # TODO update interpolation
     PlutoController.getSdr().tx_gain = float(PlutoConfig_support.txGain.get())
 
+    # Update PulseShaping Filter Values
+    D = int(PlutoConfig_support.pulseShapingD.get())
+    P = int(PlutoConfig_support.pulseShapingP.get())
+    alpha = float(PlutoConfig_support.pulseShapingAlpha.get())
+    PlutoController.updatePulseShapingFilter(D=D, P=P, alpha=alpha)
+
     updateGUI()
 
 def updateGUI():
@@ -128,7 +136,13 @@ def updateGUI():
 
     PlutoConfig_support.rxImaginary.set(PlutoController.getRXImaginary())
     PlutoConfig_support.txImaginary.set(PlutoController.getTXImaginary())
+    PlutoConfig_support.txOn.set(PlutoController.getTXStatus())
     
+    # Update Pulse Shaping Values
+    (D, P, alpha) = PlutoController.getPulseShapingValues()
+    PlutoConfig_support.pulseShapingD.set(D)
+    PlutoConfig_support.pulseShapingP.set(P)
+    PlutoConfig_support.pulseShapingAlpha.set(alpha)
 
 def loadGUIItems():
     global ctx

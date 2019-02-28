@@ -105,7 +105,7 @@ class Modulation:
         fc : int
             center frequency (Hz)
         fs : int
-            sampling freqency (Hz or SPS)
+            sampling freqency (Hz)
         data : str
             data represented as a string
         Returns
@@ -141,7 +141,7 @@ class Modulation:
         fc : int
             center frequency (Hz)
         fs : int
-            sampling freqency (Hz or SPS)
+            sampling freqency (Hz)
         rxData : list
             raw data received from rx
         Returns

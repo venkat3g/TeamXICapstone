@@ -11,7 +11,12 @@ from modulation.Modulation import ModulationFactory
 
 _sdr = None
 
+_msg = "hello world"
+_msg_sent = False
 _scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
+_D = _scheme.D
+_P = _scheme.P
+_alpha = _scheme.alpha
 
 threadPeriod = 5
 
@@ -21,6 +26,7 @@ rxGainModes = ["manual", "slow_attack", "fast_attack", "hybrid"]
 rxPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
 rxPlotIndex = 2
 
+_tx_on = True
 txSamples = 2**15
 txDataFile = ""
 txPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
@@ -58,7 +64,7 @@ def configure(frequency, sampling_frequency):
         frequency: type=int
             The frequency to set the Pluto's TX and RX (in MHz)
         sampling_frequency: type=int
-            The sampling frequency of the Pluto (in MSPS)
+            The sampling frequency of the Pluto (in MHz)
     """
     _sdr.rx_lo_freq = frequency
     _sdr.sampling_frequency = sampling_frequency
@@ -71,19 +77,18 @@ def writeXSamples(x):
         x: type=int
             the number of samples to write
     """
+    global _msg
     raw = False
 
-    # iq = generateRandomWaveform(x)
-    # raw = True
-
-    
-
-    msg = "hello world"
+    msg = _msg
     iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, msg)
 
     _sdr.writeTx(iq, raw)
 
     return _sdr.raw2complex(iq) if raw else iq
+
+def turnOffTX():
+    _sdr.writeTx([]) # turns off TX
 
 def generateRandomWaveform(x):
     N = x
@@ -122,7 +127,8 @@ def plutoRXThread(args):
     global _sdr, rxSamples
     while not args['done']:
 
-        txData = writeXSamples(txSamples)
+        if not _msg_sent and getTXStatus():
+            txData = writeXSamples()
 
         rxData = readComplexRX()
 
@@ -136,6 +142,16 @@ def plutoRXThread(args):
 
         time.sleep(threadPeriod)
 
+def setTXStatus(txOn):
+    global _tx_on, _msg_sent
+    _tx_on = txOn == '1'
+
+    if not _tx_on:
+        turnOffTX()
+        _msg_sent = False # Message will be sent again when enabled.
+
+def getTXStatus():
+    return _tx_on
 
 def updateRXImaginary(value):
     testPlot.rxImaginary = value == '1'
@@ -163,3 +179,34 @@ def updateTXPlot(value):
 def updateModScheme(value):
     global _scheme
     _scheme = ModulationFactory.chooseScheme(value)
+
+    if _D is not None:
+        _scheme.D = _D
+    if _P is not None:
+        _scheme.P = _P
+    if _alpha is not None:
+        _scheme.alpha = _alpha
+
+def updatePulseShapingFilter(D, P, alpha):
+    global _D, _P, _alpha
+    _D = D
+    _P = P
+    _alpha = alpha
+
+    _scheme.D = _D
+    _scheme.P = _P
+    _scheme.alpha = _alpha
+
+def getPulseShapingValues():
+    global _D, _P, _alpha
+    return (_D, _P, _alpha)
+
+def updateMsgToSend(filename):
+    global _msg, _msg_sent, txDataFile
+    txDataFile = filename
+    if filename is not "":
+        _msg = ""
+        _msg_sent = False
+        with open(filename) as f:
+            for x in f:
+                _msg += x
