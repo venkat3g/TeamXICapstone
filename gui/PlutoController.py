@@ -79,8 +79,6 @@ def writeXSamples():
     Write 0 to X bytes to TX
     """
     global _msg, _msg_sent
-    raw = False
-
     msg = _msg
     iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, msg)
 
@@ -134,10 +132,6 @@ def plutoRXThread(args):
             txData = writeXSamples()
 
         rxData = readComplexRX()
-
-        # f, Pper_spec = signal.periodogram(ys, 1.0, 'flattop', scaling='spectrum')
-
-        
         testPlot.compl = True
         # testPlot.plot_fir = True
         testPlot.rxData = rxData
