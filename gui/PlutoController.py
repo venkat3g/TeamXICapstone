@@ -7,6 +7,8 @@ from pluto import fir_tools
 import scipy.signal as signal
 import scipy.fftpack as fftpack
 from modulation.Modulation import ModulationFactory
+from plutoDevice.PlutoSdrWrapper import PlutoSdrWrapper
+from plutoDevice.SimPlutoSdr import SimPlutoSdr
 
 
 _sdr = None
@@ -42,9 +44,9 @@ def getSdr():
     if _sdr is None:
         ctxs = iio.scan_contexts()
         if len(ctxs.keys()) > 0:
-            _sdr = PlutoSdr(uri=str(next(enumerate(ctxs))[1]))
+            _sdr = PlutoSdrWrapper()
         else:
-            raise Exception("Could not connect to any Pluto Devices.")
+            _sdr = SimPlutoSdr()
 
     return _sdr
 
