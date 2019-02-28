@@ -18,7 +18,7 @@ while os.path.isfile(filename):
 
 deviceInfoPage.vp_start_gui()
 
-# PlutoController.configure(2400, 30)
+# PlutoController.configure(2400, 3, 10)
 
 deviceInfoPage.loadGUIItems()
 

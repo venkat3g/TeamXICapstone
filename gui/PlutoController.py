@@ -58,7 +58,7 @@ def getIIOContext():
     """
     return _sdr.ctx
 
-def configure(frequency, sampling_frequency):
+def configure(frequency, sampling_frequency, gain):
     """
     Configures the Pluto's frequency and sampling frequency
 
@@ -68,8 +68,11 @@ def configure(frequency, sampling_frequency):
         sampling_frequency: type=int
             The sampling frequency of the Pluto (in MHz)
     """
-    _sdr.rx_lo_freq = frequency
-    _sdr.sampling_frequency = sampling_frequency
+    getSdr().rx_lo_freq = frequency
+    getSdr().tx_lo_freq = frequency
+    getSdr().sampling_frequency = sampling_frequency
+    getSdr().rx_gain_mode = rxGainModes[0]
+    getSdr().rx_gain = 10
 
 def writeXSamples():
     """
