@@ -16,18 +16,22 @@ while os.path.isfile(filename):
 
 # logging.basicConfig(filename=filename, level=logging.DEBUG)
 
-deviceInfoPage.vp_start_gui()
+PlutoController.rx_show_all_plots = False
 
-# PlutoController.configure(2400, 3, 10)
+if PlutoController.rx_show_all_plots:
+    PlutoController.configure(2400, 3, 10)
 
-deviceInfoPage.loadGUIItems()
+if not PlutoController.rx_show_all_plots:
+    deviceInfoPage.vp_start_gui()
+    deviceInfoPage.loadGUIItems()
 
 CollectionThread.start(PlutoController.plutoRXThread)
 
-testPlot.openWindow()
+if not PlutoController.rx_show_all_plots:
+    testPlot.openWindow()
 
-deviceInfoPage.vp_start_loop()
+    deviceInfoPage.vp_start_loop()
 
-CollectionThread.stop()
+    CollectionThread.stop()
 
 print("done")

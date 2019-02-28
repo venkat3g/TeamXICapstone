@@ -27,6 +27,7 @@ rxGainModeIndex =  0
 rxGainModes = ["manual", "slow_attack", "fast_attack", "hybrid"]
 rxPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
 rxPlotIndex = 2
+rx_show_all_plots = False
 
 _tx_on = True
 txSamples = 2**15
@@ -125,7 +126,7 @@ def readRawRX():
     return rxData
 
 def plutoRXThread(args):
-    global _sdr, rxSamples, _msg_sent
+    global _sdr, rxSamples, _msg_sent, rx_show_all_plots
     while not args['done']:
 
         if not _msg_sent and getTXStatus():
@@ -135,6 +136,12 @@ def plutoRXThread(args):
         testPlot.compl = True
         # testPlot.plot_fir = True
         testPlot.rxData = rxData
+
+        if rx_show_all_plots:
+            strOut = _scheme.demodulateData(_sdr.rx_lo_freq, _sdr.sampling_frequency, 
+                        rxData, showAllPlots=rx_show_all_plots)
+            print(len(strOut))
+            print(strOut)
         testPlot.txData = txData
 
         time.sleep(threadPeriod)
