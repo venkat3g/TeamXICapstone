@@ -65,11 +65,21 @@ class Modulation:
         # Pilot Sequence - Barker code
         return [1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1]
 
-    def _pilot_upsample(self):
+    def _get_pilot_upsample(self):
         return Modulation._upsample(self.pilot_sequence, self.P, float)
 
     pilot_sequence = property(_get_pilot_sequence)
-    _pilot_upsample = property(_pilot_upsample)
+    _pilot_upsample = property(_get_pilot_upsample)
+
+    def _get_footer_sequence(self):
+        # Flip pilot sequence
+        return np.flip(self.pilot_sequence)
+
+    def _get_footer_upsample(self):
+        return Modulation._upsample(self.footer_sequence, self.P, float)
+
+    footer_sequence = property(_get_footer_sequence)
+    _footer_upsample = property(_get_footer_upsample)
 
     _P = 30
     _D = 4
@@ -113,13 +123,11 @@ class Modulation:
         --------
         1-D ndarray of floats
         """
-        Ts = 1.0 / fs
-
         # Get Pulse Shaping Filter
-        
         g = self.pulseShapingFilter(self.D, self.alpha, self.P)
 
         _pilots = self.pilot_sequence # alias
+        _footer = self.footer_sequence
 
         # symbol mapping
         symbols = self.symbolMap(data, False)
@@ -127,6 +135,7 @@ class Modulation:
         # create packet by concatenating pilots with data
         packet = list(_pilots)
         packet.extend(symbols)
+        packet.extend(_footer)
 
         # upsample packet and convolve packetup with pulse shaping filter g
         m = sig.upfirdn(g, packet, self.P)
@@ -149,13 +158,12 @@ class Modulation:
         --------
         string representation of data
         """
-        Ts = 1.0 / fs
         _pilots = self.pilot_sequence # alias
         g = self.pulseShapingFilter(self.D, self.alpha, self.P)
 
         # upsample _pilots
-        a = list(_pilots) # copy list
         aup = self._pilot_upsample # alias
+        footerUp = self._footer_upsample # alias
         
         # convolve demodulated signal with pulse shaping filter
         yup = sig.convolve(rxData, g)
@@ -163,21 +171,35 @@ class Modulation:
         # time framing sync using correlation
         timingTest = sig.convolve(yup, np.flip(aup))
         absTimingTest = np.abs(timingTest)
-        peakMag = absTimingTest.max()
-        peakIndex = np.argmax(absTimingTest)
+        peakMag1 = absTimingTest.max()
+        peakIndexList1, _ = sig.find_peaks(absTimingTest, np.floor(peakMag1))
+        peakStartIndex = peakIndexList1[0]
+        
+        # footer timing
+        timingTestEnd = sig.convolve(yup, np.flip(np.conj(footerUp)))
+        timingTestEnd = np.append(np.zeros(peakStartIndex), timingTestEnd[peakStartIndex:]) # start looking after 
+        absTimingTestEnd = np.abs(timingTestEnd)
+        peakMag2 = absTimingTestEnd.max()
+        peakIndexList2, _ = sig.find_peaks(absTimingTestEnd, np.floor(peakMag2))
+        peakEndIndex = peakIndexList2[0]
+        
         if showAllPlots:
             timingFigure = plt.figure()
             ax = timingFigure.add_subplot(111)
             ax.scatter(range(len(timingTest)), np.abs(timingTest))
+            ax.scatter(range(len(timingTestEnd)), np.abs(timingTestEnd))
             ax.set_title('Timing Figure')
 
         # index of first pilot symbol
-        t0 = peakIndex - len(aup) + 1
+        t0 = peakStartIndex - len(aup) + 1
 
-        # get pilots and data from upsampled y
-        yPilots, yData = self._get_pilot_data(yup, t0, showAllPlots=showAllPlots)
+        # index last symbol
+        tEnd = peakEndIndex
+
+        # get pilots, data, and footer from upsampled y (footer is ignored)
+        yPilots, yData, _ = self._sep_upsampled_data(yup, t0, tEnd, showAllPlots=showAllPlots)
         
-        # freq and phase error correction
+        # freq and phase error correction using pilot sequence
         strOut = self._freq_phase_error_correction(fs, yPilots, yData, showFinalConstellation=showFinalConstellation, showAllPlots=showAllPlots)
 
         if showAllPlots or showFinalConstellation:
@@ -220,7 +242,7 @@ class Modulation:
             syncData = yData * np.exp(-1.j * (slope * n + intercept))
 
             # undo symbol mapping
-            strOut = self.symbolDemap(syncData[:len(syncData) - (len(syncData) % 8)], False)
+            strOut = self.symbolDemap(syncData, False)
             strOut = "".join([chr(c) for c in strOut])
 
             # final constellation
@@ -232,20 +254,21 @@ class Modulation:
 
             return strOut
 
-    def _get_pilot_data(self, yup, t0, showAllPlots=False):
+    def _sep_upsampled_data(self, yup, t0, tEnd, showAllPlots=False):
         _pilots = self.pilot_sequence # alias
-        aup = self._pilot_upsample # alias
+        _footer = self.footer_sequence # alias
 
-        y = yup[t0:t0 + (len(yup) - len(aup)) - 1:self.P] # TODO not sure is always true
+        y = yup[t0:tEnd:self.P]
         yPilots = y[0:len(_pilots)]
-        yData = y[len(_pilots):]
+        yData = y[len(_pilots):len(y)-len(_footer)]
+        yFooter = y[len(_pilots) + len(yData):]
         if showAllPlots:
             initConstFig = plt.figure()
             ax = initConstFig.add_subplot(111, projection='3d')
             ax.scatter(yData.real, range(len(yData)), yData.imag)
             ax.set_title('Initial Constellation')
         
-        return (yPilots, yData)
+        return (yPilots, yData, yFooter)
 
 class _BPSK(Modulation):
     '''
