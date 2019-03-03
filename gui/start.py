@@ -2,22 +2,36 @@ import plutoPage as deviceInfoPage
 import iio_xmlInfo
 import testPlot
 import PlutoController
+import randomData
 import CollectionThread
+import logging
+import os
 
 
+filename = 'pluto.log'
+i = 0
+while os.path.isfile(filename):
+    i = i + 1
+    filename = 'pluto' + str(i) + '.log'
 
-deviceInfoPage.vp_start_gui()
+# logging.basicConfig(filename=filename, level=logging.DEBUG)
 
-PlutoController.configure(2400, 30)
+PlutoController.rx_show_all_plots = False
 
-deviceInfoPage.loadGUIItems()
+if PlutoController.rx_show_all_plots:
+    PlutoController.configure(2400, 3, 10)
 
-CollectionThread.start()
+if not PlutoController.rx_show_all_plots:
+    deviceInfoPage.vp_start_gui()
+    deviceInfoPage.loadGUIItems()
 
-testPlot.openWindow()
+CollectionThread.start(PlutoController.plutoRXThread)
 
-deviceInfoPage.vp_start_loop()
+if not PlutoController.rx_show_all_plots:
+    testPlot.openWindow()
 
-CollectionThread.stop()
+    deviceInfoPage.vp_start_loop()
+
+    CollectionThread.stop()
 
 print("done")
