@@ -1,8 +1,6 @@
 import plutoPage as deviceInfoPage
-import iio_xmlInfo
 import testPlot
 import PlutoController
-import randomData
 import CollectionThread
 import logging
 import os

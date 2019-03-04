@@ -1,4 +1,3 @@
-import randomData
 import threading
 import PlutoController
 import testPlot
