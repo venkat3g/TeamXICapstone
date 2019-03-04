@@ -80,8 +80,8 @@ class TestQPSK(unittest.TestCase):
 
     def test_timing(self):
         scheme = ModulationFactory.chooseScheme('qpsk')
-        largeMsg = ['x' for x in range(int(2**10))]
-        largerMsg = ['x' for x in range(int(2**12))]
+        largeMsg = [chr(ord('a') + (x % 26)) for x in range(int(2**10))]
+        largerMsg = [chr(ord('a') + (x % 26)) for x in range(int(2**12))]
 
         fc = 2.2e9
         fs = 3e6
