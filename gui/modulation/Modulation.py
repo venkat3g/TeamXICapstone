@@ -172,7 +172,7 @@ class Modulation:
         timingTest = sig.convolve(yup, np.flip(aup))
         absTimingTest = np.abs(timingTest)
         peakMag1 = absTimingTest.max()
-        peakIndexList1, _ = sig.find_peaks(absTimingTest, np.floor(peakMag1))
+        peakIndexList1, _ = sig.find_peaks(absTimingTest, 0.9 * peakMag1)
         peakStartIndex = peakIndexList1[0]
         
         # footer timing
@@ -180,7 +180,7 @@ class Modulation:
         timingTestEnd = np.append(np.zeros(peakStartIndex), timingTestEnd[peakStartIndex:]) # start looking after 
         absTimingTestEnd = np.abs(timingTestEnd)
         peakMag2 = absTimingTestEnd.max()
-        peakIndexList2, _ = sig.find_peaks(absTimingTestEnd, np.floor(peakMag2))
+        peakIndexList2, _ = sig.find_peaks(absTimingTestEnd, 0.9 * peakMag2)
         peakEndIndex = peakIndexList2[0]
         
         if showAllPlots:
@@ -304,7 +304,7 @@ class _QPSK(Modulation):
         return complex2raw(symbols) if raw else np.array(symbols)
 
     def symbolDemap(self, rxData, raw=False):
-        data = raw2complex(rxData) if raw else rxData
+        data = raw2complex(rxData) if raw else rxData[:(len(rxData)//2)*2]
 
         # take complex data and group it into
         # 00, 01, 10, 11
