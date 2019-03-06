@@ -145,7 +145,7 @@ class Modulation:
     def demodulateData(self, fc, fs, rxData, showFinalConstellation=False, showAllPlots=False):
         """
         Demodulates the given data for a given frequency center and sampling frequency.
-
+        By default only demodulates the first message found in the buffer.
         Parameeters
         -------------
         fc : int
@@ -158,39 +158,44 @@ class Modulation:
         --------
         string representation of data
         """
-        _pilots = self.pilot_sequence # alias
-        g = self.pulseShapingFilter(self.D, self.alpha, self.P)
+        yup = self.unfilterData(rxData)
+        
+        peakStartList, peakEndList = self.findAllStartEnd(yup, showAllPlots=showAllPlots)
 
-        # upsample _pilots
+        # pick first start and end pair
+        peakStartIndex = peakStartList[0]
+        peakEndIndex = peakEndList[0]
+
+        # demodulate only the chosen set in yup
+        strOut = self.demodulateBetweenIndices(fc, fs, peakStartIndex, peakEndIndex, yup, 
+            showAllPlots=showAllPlots, showFinalConstellation=showFinalConstellation)
+        
+        return strOut
+
+    def demodulateBetweenIndices(self, fc, fs, peakStartIndex, peakEndIndex, yup, 
+            showAllPlots=False, showFinalConstellation=False):
+        """
+        Demodulates the given data for a given frequency center and sampling frequency.
+        By default only demodulates the first message found in the buffer.
+        Parameeters
+        -------------
+        fc : int
+            center frequency (Hz)
+        fs : int
+            sampling freqency (Hz)
+        peakStartIndex : int
+            which pilot sequence to start from
+        peakEndIndex : int
+            which footer sequence to end at
+        yup : list
+            unfiltered rxData
+        Returns
+        --------
+        string representation of data
+        """
         aup = self._pilot_upsample # alias
-        footerUp = self._footer_upsample # alias
-        
-        # convolve demodulated signal with pulse shaping filter
-        yup = sig.convolve(rxData, g)
-        
-        # time framing sync using correlation
-        timingTest = sig.convolve(yup, np.flip(aup))
-        absTimingTest = np.abs(timingTest)
-        peakMag1 = absTimingTest.max()
-        peakIndexList1, _ = sig.find_peaks(absTimingTest, 0.9 * peakMag1)
-        peakStartIndex = peakIndexList1[0]
-        
-        # footer timing
-        timingTestEnd = sig.convolve(yup, np.flip(np.conj(footerUp)))
-        timingTestEnd = np.append(np.zeros(peakStartIndex), timingTestEnd[peakStartIndex:]) # start looking after 
-        absTimingTestEnd = np.abs(timingTestEnd)
-        peakMag2 = absTimingTestEnd.max()
-        peakIndexList2, _ = sig.find_peaks(absTimingTestEnd, 0.9 * peakMag2)
-        peakEndIndex = peakIndexList2[0]
-        
-        if showAllPlots:
-            timingFigure = plt.figure()
-            ax = timingFigure.add_subplot(111)
-            ax.scatter(range(len(timingTest)), np.abs(timingTest))
-            ax.scatter(range(len(timingTestEnd)), np.abs(timingTestEnd))
-            ax.set_title('Timing Figure')
 
-        # index of first pilot symbol
+        # index of start of pilot symbol
         t0 = peakStartIndex - len(aup) + 1
 
         # index last symbol
@@ -200,13 +205,57 @@ class Modulation:
         yPilots, yData, _ = self._sep_upsampled_data(yup, t0, tEnd, showAllPlots=showAllPlots)
         
         # freq and phase error correction using pilot sequence
-        strOut = self._freq_phase_error_correction(fs, yPilots, yData, showFinalConstellation=showFinalConstellation, showAllPlots=showAllPlots)
+        try:
+            strOut = self._freq_phase_error_correction(fs, yPilots, yData, showFinalConstellation=showFinalConstellation, showAllPlots=showAllPlots)
+        except:
+            strOut = ""
 
         if showAllPlots or showFinalConstellation:
             plt.show()
 
+        # if len(strOut) == 0:
+        #     print("Check")
+
         return strOut
     
+    def unfilterData(self, rxData):
+        g = self.pulseShapingFilter(self.D, self.alpha, self.P)
+        # convolve demodulated signal with pulse shaping filter
+        yup = sig.convolve(rxData, g)
+        return yup
+
+    def findAllStartEnd(self, yup, showAllPlots=False):
+        aup = self._pilot_upsample # alias
+        footerUp = self._footer_upsample # alias
+
+        startIndices = []
+        endIndices = []
+
+        # time framing sync using correlation
+        timingTest = sig.convolve(yup, np.flip(aup))
+        absTimingTest = np.abs(timingTest)
+        peakMag1 = absTimingTest.max()
+        startIndices, _ = sig.find_peaks(absTimingTest, 0.9 * peakMag1)
+
+        if len(startIndices) > 0:
+            peakStartIndex = startIndices[0]
+        
+            # footer timing
+            timingTestEnd = sig.convolve(yup, np.flip(np.conj(footerUp)))
+            timingTestEnd = np.append(np.zeros(peakStartIndex), timingTestEnd[peakStartIndex:]) # start looking after 
+            absTimingTestEnd = np.abs(timingTestEnd)
+            peakMag2 = absTimingTestEnd.max()
+            endIndices, _ = sig.find_peaks(absTimingTestEnd, 0.9 * peakMag2)
+
+        if showAllPlots:
+            timingFigure = plt.figure()
+            ax = timingFigure.add_subplot(111)
+            ax.scatter(range(len(timingTest)), np.abs(timingTest))
+            ax.scatter(range(len(timingTestEnd)), np.abs(timingTestEnd))
+            ax.set_title('Timing Figure')
+
+        return startIndices, endIndices
+
     def symbolMap(self, data, raw=False):
         raise NotImplementedError("Call to abstract Modulation Interface or method not yet implemented")
     
