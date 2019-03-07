@@ -89,9 +89,6 @@ def update(evnt):
     PlutoController.threadPeriod = float(PlutoConfig_support.threadUpdate.get())
     testPlot.set_animation_period(float(PlutoConfig_support.plotUpdate.get()))
 
-    # Update PlutoSDR
-    PlutoController.getSdr().sampling_frequency = float(PlutoConfig_support.samplingFrequency.get())
-
     # Update PlutoSDR using RX Frame information
     PlutoController.rxSamples = int(PlutoConfig_support.rxSamples.get())
     PlutoController.getSdr().rx_bandwidth = float(PlutoConfig_support.rxBandwidth.get())
@@ -111,6 +108,12 @@ def update(evnt):
     P = int(PlutoConfig_support.pulseShapingP.get())
     alpha = float(PlutoConfig_support.pulseShapingAlpha.get())
     PlutoController.updatePulseShapingFilter(D=D, P=P, alpha=alpha)
+    desiredBandwidth = float(PlutoConfig_support.desiredBandwidth.get())
+    PlutoController.updateDesiredBandwidth(desiredBandwidth)
+
+    # Calculate Sampling Frequency from P, alpha and desiredBandwidth
+    # and set Pluto's sampling_frequency
+    PlutoController.getSdr().sampling_frequency = P * desiredBandwidth / (1 + alpha)
 
     updateGUI()
 
@@ -143,6 +146,7 @@ def updateGUI():
     PlutoConfig_support.pulseShapingD.set(D)
     PlutoConfig_support.pulseShapingP.set(P)
     PlutoConfig_support.pulseShapingAlpha.set(alpha)
+    PlutoConfig_support.desiredBandwidth.set(PlutoController.getDesiredBandwidth())
 
 def loadGUIItems():
     global ctx

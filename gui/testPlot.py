@@ -70,7 +70,7 @@ def animate(i):
                         
                         ax1.plot(w, 20*np.log10(np.abs(h)), PLOT_COLOURS[1])
                         ax1.set_xlabel('Frequency [MHz]')
-                        ax1.set_ylabel('Amplidude [dB]')
+                        ax1.set_ylabel('Amplitude [dB]')
 
                 elif PlutoController.rxPlotList[PlutoController.rxPlotIndex] == 'Constellation (X vs Y)':
                         xs = [x.real for x in rxData]
@@ -92,7 +92,7 @@ def animate(i):
                         
                         ax2.plot(w, 20*np.log10(np.abs(h)), PLOT_COLOURS[1])
                         ax2.set_xlabel('Frequency [MHz]')
-                        ax2.set_ylabel('Amplidude [dB]')
+                        ax2.set_ylabel('Amplitude [dB]')
 
                 elif PlutoController.txPlotList[PlutoController.txPlotIndex] == 'Constellation (X vs Y)':
                         xs = [x.real for x in txData]
