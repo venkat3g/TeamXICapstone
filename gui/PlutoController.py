@@ -19,6 +19,7 @@ _scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
 _D = _scheme.D
 _P = _scheme.P
 _alpha = _scheme.alpha
+_desiredBandwidth = 1.0 # in MHz
 
 threadPeriod = 5
 
@@ -214,3 +215,11 @@ def updateMsgToSend(filename):
         with open(filename) as f:
             for x in f:
                 _msg += x
+
+def getDesiredBandwidth():
+    return _desiredBandwidth
+
+def updateDesiredBandwidth(bandwidth):
+    global _desiredBandwidth
+    _desiredBandwidth = bandwidth
+    _msg_sent = False # Message must be resent with new desired bandwidth
