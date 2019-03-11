@@ -69,7 +69,7 @@ def addGUIContent():
 
     # Modulation Scheme Drop-down
     modScheme = tk.StringVar()
-    modScheme.set(PlutoController.ModulationFactory.QAM)
+    modScheme.set(PlutoController.getScheme().name)
     
     popupMenu = tk.OptionMenu(top.ModulationSchemeFrame, modScheme, *PlutoController.ModulationFactory.SUPPORTED_SCHEMES)
     popupMenu.place(relx=0.5, rely=0.25)

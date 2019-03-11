@@ -16,7 +16,7 @@ _sdr = None
 _msg = "hello world"
 _msg_recv = None
 _msg_sent = False
-_scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
+_scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM16)
 _D = _scheme.D
 _P = _scheme.P
 _alpha = _scheme.alpha
@@ -88,7 +88,7 @@ def writeXSamples():
     global _msg, _msg_sent
     msg = _msg
     packet = XIPacket(buffer=msg)
-    iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, packet.rep)
+    iq = _scheme.modulateData(packet.rep)
 
     _sdr.writeTx(iq)
     _msg_sent = True
@@ -97,23 +97,6 @@ def writeXSamples():
 
 def turnOffTX():
     _sdr.writeTx([]) # turns off TX
-
-def generateRandomWaveform(x):
-    N = x
-
-    fc = _sdr.tx_lo_freq
-    ts = 1/float(_sdr.sampling_frequency * 1e6)
-    t = np.arange(0, N*ts, ts)
-
-    i = np.sin(2*np.pi*t*fc) * 2**10
-    q = np.cos(2*np.pi*t*fc) * 2**10
-    
-    iq = np.empty((i.size + q.size,), dtype=i.dtype)
-    iq[0::2] = i
-    iq[1::2] = q
-    iq = np.int16(iq)
-
-    return iq
 
 def readComplexRX():
     """
@@ -151,8 +134,7 @@ def plutoRXThread(args):
 def getMessage(rxData):
     msg = ""
     if len(rxData) > 0:
-        buffer = _scheme.demodulateData(_sdr.rx_lo_freq, _sdr.sampling_frequency, 
-                            rxData, showAllPlots=rx_show_all_plots)
+        buffer = _scheme.demodulateData(rxData, showAllPlots=rx_show_all_plots)
         packet = XIPacket.createXIPacket(buffer=buffer)
         msg = packet.payload if packet and packet.payload else ""
     return msg
