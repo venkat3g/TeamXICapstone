@@ -14,6 +14,7 @@ from plutoDevice.SimPlutoSdr import SimPlutoSdr
 _sdr = None
 
 _msg = "hello world"
+_msg_recv = None
 _msg_sent = False
 _scheme = ModulationFactory.chooseScheme(ModulationFactory.QAM)
 _D = _scheme.D
@@ -29,6 +30,7 @@ rxGainModes = ["manual", "slow_attack", "fast_attack", "hybrid"]
 rxPlotList = ["Time", "Frequency", "Constellation (X vs Y)"]
 rxPlotIndex = 2
 rx_show_all_plots = False
+readRX = False
 
 _tx_on = True
 txSamples = 2**15
@@ -126,25 +128,28 @@ def readRawRX():
     return rxData
 
 def plutoRXThread(args):
-    global _sdr, rxSamples, _msg_sent, rx_show_all_plots
+    global _sdr, rxSamples, _msg_sent, rx_show_all_plots, _msg_recv
     while not args['done']:
 
         if not _msg_sent and getTXStatus():
             txData = writeXSamples()
+            testPlot.txData = txData
 
         rxData = readComplexRX()
         testPlot.compl = True
         # testPlot.plot_fir = True
         testPlot.rxData = rxData
 
-        if rx_show_all_plots:
-            strOut = _scheme.demodulateData(_sdr.rx_lo_freq, _sdr.sampling_frequency, 
+        if rx_show_all_plots or readRX:
+            _msg_recv = _scheme.demodulateData(_sdr.rx_lo_freq, _sdr.sampling_frequency, 
                         rxData, showAllPlots=rx_show_all_plots)
-            print(len(strOut))
-            print(strOut)
-        testPlot.txData = txData
-
+            print(len(_msg_recv))
+            print(_msg_recv)
+        
         time.sleep(threadPeriod)
+
+def readRXMessage():
+    return  _msg_recv
 
 def setTXStatus(txOn):
     global _tx_on, _msg_sent
@@ -215,6 +220,12 @@ def updateMsgToSend(filename):
         with open(filename) as f:
             for x in f:
                 _msg += x
+
+def sendMsg(msg):
+    global _msg, _msg_sent
+    if msg is not "":
+        _msg = msg
+        _msg_sent = False
 
 def getDesiredBandwidth():
     return _desiredBandwidth
