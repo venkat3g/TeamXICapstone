@@ -1,7 +1,7 @@
 import plutoPage as deviceInfoPage
 import testPlot
 import PlutoController
-import CollectionThread
+from ThreadWrapper import ThreadController
 import logging
 import os
 
@@ -23,13 +23,15 @@ if not PlutoController.rx_show_all_plots:
     deviceInfoPage.vp_start_gui()
     deviceInfoPage.loadGUIItems()
 
-CollectionThread.start(PlutoController.plutoRXThread)
+collectionThread = ThreadController(PlutoController.plutoRXThread)
+
+collectionThread.start()
 
 if not PlutoController.rx_show_all_plots:
     testPlot.openWindow()
 
     deviceInfoPage.vp_start_loop()
 
-    CollectionThread.stop()
+    collectionThread.stop()
 
 print("done")
