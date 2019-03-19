@@ -3,6 +3,7 @@ import PlutoConfig
 import PlutoController
 import PlutoConfig_support
 import testPlot
+import launchTTT
 
 try:
     import Tkinter as tk
@@ -22,14 +23,16 @@ except ImportError:
 
 ctx = None
 top = None
+playerNumber = 1
 
 def vp_start_gui():
     '''Starting point when module is the main routine.'''
-    global root, top, rxPlot, txPlot, RXPlotOptionMenu, TXPlotOptionMenu
+    global root, top
     root = tk.Tk()
     root.withdraw()
     (w, top) = PlutoConfig.create_TopLevel(root)
 
+    addMenubar(w)
     addGUIContent()
 
     # Set Bindings for updates
@@ -82,6 +85,29 @@ def addGUIContent():
     PlutoConfig_support.txImaginary.trace('w', lambda *args: PlutoController.updateTXImaginary(PlutoConfig_support.txImaginary.get()))
     PlutoConfig_support.txOn.trace('w', lambda *args: PlutoController.setTXStatus(PlutoConfig_support.txOn.get()))
     
+
+def addMenubar(w):
+    menubar = tk.Menu(root)
+    sub_menu = tk.Menu(root, tearoff=0)
+    menubar.add_cascade(menu=sub_menu, label="Games")
+    menubar.add_command(label="Show Plot", command=testPlot.openWindow)
+    
+    sub_menu.add_command(label="Tic-Tac-Toe", command=startTicTacToe)
+    sub_menu.add_radiobutton(label="Player 1", command=setPlayerOne)
+    sub_menu.add_radiobutton(label="Player 2", command=setPlayerTwo)
+
+    w.config(menu=menubar)
+    
+def setPlayerOne():
+    global playerNumber
+    playerNumber = 1
+
+def setPlayerTwo():
+    global playerNumber
+    playerNumber = 2
+
+def startTicTacToe():
+    launchTTT.startTicTacToe(root, playerNumber)
 
 def update(evnt):
 

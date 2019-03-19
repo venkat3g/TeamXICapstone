@@ -1,10 +1,8 @@
-import plutoPage as deviceInfoPage
-import testPlot
-import PlutoController
-from ThreadWrapper import ThreadController
+from gui import plutoPage as deviceInfoPage
+from gui import testPlot, PlutoController
+from gui.ThreadWrapper import ThreadController
 import logging
 import os
-
 
 filename = 'pluto.log'
 i = 0
@@ -14,6 +12,7 @@ while os.path.isfile(filename):
 
 # logging.basicConfig(filename=filename, level=logging.DEBUG)
 
+PlutoController.readRX = True
 PlutoController.rx_show_all_plots = False
 
 if PlutoController.rx_show_all_plots:
