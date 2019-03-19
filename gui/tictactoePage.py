@@ -33,13 +33,12 @@ def updateGrid(evnt):
         tictactoe_support.playerText.set(_gameController.getStatusText())
 
 
-def vp_start_gui(gameController):
+def vp_start_gui(root, gameController):
     '''Starting point when module is the main routine.'''
-    global root, _gameController, game_positions
-    root = tk.Tk()
-    root.withdraw()
+    global _gameController, game_positions, w
     (w, top) = tictactoe.create_TicTacToeTL(root)
     
+    game_positions = []
     _gameController = gameController
     status = gameController.getStatusText()
     tictactoe_support.playerText.set(status)
@@ -60,8 +59,3 @@ def vp_start_gui(gameController):
 
         tkStringVar.set('')
         button.bind('<ButtonRelease-1>', updateGrid)
-
-    w.protocol("WM_DELETE_WINDOW", root.quit)
-
-def vp_start_loop():
-    root.mainloop()

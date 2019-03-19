@@ -223,9 +223,8 @@ def updateMsgToSend(filename):
 
 def sendMsg(msg):
     global _msg, _msg_sent
-    if msg is not "":
-        _msg = msg
-        _msg_sent = False
+    _msg = msg
+    _msg_sent = False
 
 def getDesiredBandwidth():
     return _desiredBandwidth
