@@ -3,19 +3,54 @@ from timeit import default_timer as timer
 from Modulation import *
 import filter as f
 
+
+class TestModulationSettings(unittest.TestCase):
+    def test_init(self):
+        self.assertIsNotNone(ModulationSettings)
+
+        scheme = ModulationFactory.chooseScheme('qam')
+        settings = ModulationSettings(scheme)
+        self.assertIsNotNone(settings)
+        self.assertIsInstance(settings, ModulationSettings)
+        self.assertIsInstance(settings.getString(), str)
+
+    def test_modulation_creation(self):
+        msg = 'hello world'
+        fc = 2250
+        fs = 3
+        scheme = ModulationFactory.chooseScheme('qam')
+        settings = ModulationSettings(scheme)
+        scheme2 = ModulationSettings.createModulation(settings.getString())
+
+        schemeMod = scheme.modulateData(fc, fs, msg)
+        scheme2Mod = scheme2.modulateData(fc, fs, msg)
+        self.assertTrue(np.array_equal(schemeMod, scheme2Mod))
+
+        schemeDemod = scheme.demodulateData(fc, fs, schemeMod)
+        scheme2Demod = scheme2.demodulateData(fc, fs, schemeMod)
+        self.assertEqual(schemeDemod, scheme2Demod)
+
+        schemeDemod = scheme.demodulateData(fc, fs, scheme2Mod)
+        scheme2Demod = scheme2.demodulateData(fc, fs, scheme2Mod)
+        self.assertEqual(schemeDemod, scheme2Demod)
+
+
 class TestModulationFactory(unittest.TestCase):
     def test_init(self):
         self.assertIsNotNone(ModulationFactory)
+
 
 class TestModulation(unittest.TestCase):
     def test_init(self):
         self.assertIsNotNone(Modulation())
 
+
 class TestBPSK(unittest.TestCase):
     def test_init(self):
         self.assertIsNotNone(ModulationFactory.chooseScheme('bpsk'))
-        self.assertIsNotNone(ModulationFactory.chooseScheme(ModulationFactory.BPSK))
-        
+        self.assertIsNotNone(
+            ModulationFactory.chooseScheme(ModulationFactory.BPSK))
+
     def test_create_symbol(self):
         scheme = ModulationFactory.chooseScheme('bpsk')
         msg = 'abc'
@@ -23,21 +58,21 @@ class TestBPSK(unittest.TestCase):
 
         self.assertIsNotNone(scheme.symbolMap(msg))
         self.assertIsNotNone(scheme.symbolMap(msg2))
-        
+
         # tests that the buffer is the exact same when given two identical messages
         tx_buf = scheme.symbolMap(msg)
         tx_buf2 = scheme.symbolMap(msg)
         self.assertTrue(np.array_equal(tx_buf, tx_buf2))
-        
+
         tx_buf = scheme.symbolMap(msg2)
         tx_buf2 = scheme.symbolMap(msg2)
         self.assertTrue(np.array_equal(tx_buf, tx_buf2))
-        
+
         # test that the buffers are not the exact same when given two different messages
         tx_buf = scheme.symbolMap(msg)
         tx_buf2 = scheme.symbolMap(msg2)
         self.assertFalse(np.array_equal(tx_buf, tx_buf2))
-        
+
         tx_buf = scheme.symbolMap(msg2)
         tx_buf2 = scheme.symbolMap(msg)
         self.assertFalse(np.array_equal(tx_buf, tx_buf2))
@@ -45,12 +80,15 @@ class TestBPSK(unittest.TestCase):
     def test_create_read_symbol(self):
         pass
 
+
 class TestQPSK(unittest.TestCase):
     def test_init(self):
         self.assertIsNotNone(ModulationFactory.chooseScheme('qpsk'))
         self.assertIsNotNone(ModulationFactory.chooseScheme('qam'))
-        self.assertIsNotNone(ModulationFactory.chooseScheme(ModulationFactory.QPSK))
-        self.assertIsNotNone(ModulationFactory.chooseScheme(ModulationFactory.QAM))
+        self.assertIsNotNone(
+            ModulationFactory.chooseScheme(ModulationFactory.QPSK))
+        self.assertIsNotNone(
+            ModulationFactory.chooseScheme(ModulationFactory.QAM))
 
     def test_create_symbol(self):
         scheme = ModulationFactory.chooseScheme('qpsk')
@@ -59,21 +97,21 @@ class TestQPSK(unittest.TestCase):
 
         self.assertIsNotNone(scheme.symbolMap(msg))
         self.assertIsNotNone(scheme.symbolMap(msg2))
-        
+
         # tests that the buffer is the exact same when given two identical messages
         tx_buf = scheme.symbolMap(msg)
         tx_buf2 = scheme.symbolMap(msg)
         self.assertTrue(np.array_equal(tx_buf, tx_buf2))
-        
+
         tx_buf = scheme.symbolMap(msg2)
         tx_buf2 = scheme.symbolMap(msg2)
         self.assertTrue(np.array_equal(tx_buf, tx_buf2))
-        
+
         # test that the buffers are not the exact same when given two different messages
         tx_buf = scheme.symbolMap(msg)
         tx_buf2 = scheme.symbolMap(msg2)
         self.assertFalse(np.array_equal(tx_buf, tx_buf2))
-        
+
         tx_buf = scheme.symbolMap(msg2)
         tx_buf2 = scheme.symbolMap(msg)
         self.assertFalse(np.array_equal(tx_buf, tx_buf2))
@@ -94,13 +132,14 @@ class TestQPSK(unittest.TestCase):
         start = timer()
         tx_buf2 = scheme.modulateData(fc, fs, largerMsg)
         end = timer()
-        print("Very large tx buffer creation time: %fus" % ((end - start) * 1e6))
+        print(
+            "Very large tx buffer creation time: %fus" % ((end - start) * 1e6))
 
         start = timer()
         rx_rec_msg = scheme.demodulateData(fc, fs, tx_buf)
         end = timer()
         print("Large rx buffer read time: %fus" % ((end - start) * 1e6))
-        
+
         start = timer()
         rx_rec_msg2 = scheme.demodulateData(fc, fs, tx_buf2)
         end = timer()
@@ -110,16 +149,16 @@ class TestQPSK(unittest.TestCase):
         scheme = ModulationFactory.chooseScheme('qpsk')
         msg = 'abc'
         msg2 = 'hello world'
-        
+
         tx_buf = scheme.symbolMap(msg)
         tx_buf2 = scheme.symbolMap(msg2)
-        
+
         rx_rec_msg = scheme.symbolDemap(tx_buf)
         rx_rec_msg2 = scheme.symbolDemap(tx_buf2)
-        
+
         self.assertIsNotNone(rx_rec_msg)
         self.assertIsNotNone(rx_rec_msg2)
-        
+
         rx_constructed_msg = "".join([chr(x) for x in rx_rec_msg])
         rx_constructed_msg2 = "".join([chr(x) for x in rx_rec_msg2])
 
@@ -144,7 +183,7 @@ class TestQPSK(unittest.TestCase):
         self.assertTrue(np.array_equal(mod1, mod2))
         self.assertFalse(np.array_equal(mod1, mod3))
         self.assertFalse(np.array_equal(mod2, mod3))
-    
+
     def test_data_modulation_demodulation(self):
         scheme = ModulationFactory.chooseScheme('qpsk')
         msg = "hello world!"
@@ -164,9 +203,11 @@ class TestQPSK(unittest.TestCase):
         self.assertEqual(msg, demod2)
         self.assertEqual(msg2, demod3)
 
+
 class TestSRRC(unittest.TestCase):
     def test(self):
         pass
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,6 +18,41 @@ def raw2complex(data):
     iq = 2**-(no_bits-1)*data.astype(np.float64)
     return iq.view(np.complex128)
 
+class ModulationSettings:
+    def __init__(self, modulationScheme):
+        self.scheme = modulationScheme
+
+    def getString(self):
+        """
+        Returns a string representation of the modulation scheme
+
+        P,D,alpha,schemeName
+
+        """
+        return "%d,%d,%f,%s" % (self.scheme.P, self.scheme.D, self.scheme.alpha, self.scheme.name)
+    
+    @staticmethod
+    def createModulation(string):
+        """
+        Creates a Modulation object.
+
+        param:
+        string: type=string
+            P,D,alpha,schemeName
+        """
+        modulationSettings = string.split(',')
+        P = int(modulationSettings[0])
+        D = int(modulationSettings[1])
+        alpha = float(modulationSettings[2])
+        schemeName = str(modulationSettings[3])
+
+        scheme = ModulationFactory.chooseScheme(schemeName)
+        scheme.P = P
+        scheme.D = D
+        scheme.alpha = alpha
+
+        return scheme
+
 class Modulation:
 
     @staticmethod
@@ -106,6 +141,7 @@ class Modulation:
     P = property(_get_P, _set_P)
     D = property(_get_D, _set_D)
     alpha = property(_get_alpha, _set_alpha)
+    name = ''
 
     def modulateData(self, fc, fs, data):
         """
@@ -407,7 +443,7 @@ class ModulationFactory:
     SUPPORTED_SCHEMES = [BPSK, QPSK, QAM]
 
     @staticmethod
-    def chooseScheme(scheme, **args):
+    def chooseScheme(schemeName, **args):
         '''
         Choose a supported modulation scheme.
         
@@ -422,12 +458,16 @@ class ModulationFactory:
         returns: type=Modulation
             the modulation instance
         '''
-        if scheme == ModulationFactory.BPSK:
-            return _create_bpsk_modulation(args=args)
-        elif scheme == ModulationFactory.QAM or scheme == ModulationFactory.QPSK:
-            return _create_qam_modulation(args=args)
+        if schemeName == ModulationFactory.BPSK:
+            scheme = _create_bpsk_modulation(args=args)
+            scheme.name = schemeName
+        elif schemeName == ModulationFactory.QAM or schemeName == ModulationFactory.QPSK:
+            scheme = _create_qam_modulation(args=args)
+            scheme.name = schemeName
         else:
-            raise ValueError(scheme + ' is not supported')
+            raise ValueError(schemeName + ' is not supported')
+
+        return scheme
 
 def _create_bpsk_modulation(**args):
     return _BPSK()
