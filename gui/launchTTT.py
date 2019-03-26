@@ -5,10 +5,12 @@ import time
 from random import randint
 import ThreadWrapper, PlutoController
 
+
 def notifyOtherUser(position):
     PlutoController.sendMsg(str(position))
 
-def startTicTacToe(root, playerNumber):
+
+def startTicTacToe(root, playerNumber, onExit):
     game = TicTacToeGame()
     controller = GameController(game, playerNumber)
 
@@ -20,22 +22,27 @@ def startTicTacToe(root, playerNumber):
             if msg is not None and len(msg) == 1:
                 if controller.turn != controller.currentPlayer:
                     position = int(msg)
-                    valid = controller.updateBoard(position, (controller.currentPlayer % 2) + 1) # other players move
-                
-                    if valid:
-                        game_position = filter(lambda x: x[2] == position, page.game_positions)[0]
-                        game_position[1].set(controller.getSymbolFromBoard(position)) # update button to reflect updated board
-                    else:
-                        print("Other player attempted to play at position %d" % position)
-            
-                page.tictactoe_support.playerText.set(controller.getStatusText())
+                    valid = controller.updateBoard(
+                        position, (controller.currentPlayer % 2) +
+                        1)  # other players move
 
+                    if valid:
+                        game_position = filter(lambda x: x[2] == position,
+                                               page.game_positions)[0]
+                        game_position[1].set(
+                            controller.getSymbolFromBoard(position)
+                        )  # update button to reflect updated board
+                    else:
+                        print("Other player attempted to play at position %d" %
+                              position)
+
+                page.tictactoe_support.playerText.set(
+                    controller.getStatusText())
 
             time.sleep(1)
 
-
     page.vp_start_gui(root, controller)
-    
+
     controller.setNotifyOtherPlayerCallback(notifyOtherUser)
 
     updateGUIThread = ThreadWrapper.ThreadController(readMove)
@@ -45,6 +52,8 @@ def startTicTacToe(root, playerNumber):
     def stopTTT():
         updateGUIThread.stop()
         page.tictactoe.destroy_TicTacToeTL()
-        PlutoController.sendMsg("") # Do not send any more Tic-Tac-Toe messages
+        PlutoController.sendMsg(
+            "")  # Do not send any more Tic-Tac-Toe messages
+        onExit()
 
     page.w.protocol("WM_DELETE_WINDOW", stopTTT)
