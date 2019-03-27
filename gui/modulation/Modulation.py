@@ -286,9 +286,8 @@ class Modulation:
             phi = -1 * intercept
             phideg = phi * 180.0 / np.pi
 
-            # Correct for freq and phase offset
-            n = np.arange(len(_pilots), (len(yData) + len(_pilots))) # TODO not sure this is always true
-            syncData = yData * np.exp(-1.j * (slope * n + intercept))
+            # Correct phase offset
+            syncData = yData * np.exp(-1.j * (intercept))
 
             # undo symbol mapping
             strOut = self.symbolDemap(syncData, False)
