@@ -1,6 +1,7 @@
 import unittest
 from timeit import default_timer as timer
 from Modulation import *
+from ..networking.xi import XIPacket
 import filter as f
 
 
@@ -188,20 +189,30 @@ class TestQPSK(unittest.TestCase):
         scheme = ModulationFactory.chooseScheme('qpsk')
         msg = "hello world!"
         msg2 = "abcd"
+        packet = XIPacket(buffer=msg)
+        packet2 = XIPacket(buffer=msg2)
         fc = 12000
         fs = 44100
 
-        mod1 = scheme.modulateData(fc, fs, msg)
-        mod2 = scheme.modulateData(fc, fs, msg)
-        mod3 = scheme.modulateData(fc, fs, msg2)
+        mod1 = scheme.modulateData(fc, fs, packet.rep)
+        mod2 = scheme.modulateData(fc, fs, packet.rep)
+        mod3 = scheme.modulateData(fc, fs, packet2.rep)
 
         demod1 = scheme.demodulateData(fc, fs, mod1)
         demod2 = scheme.demodulateData(fc, fs, mod2)
         demod3 = scheme.demodulateData(fc, fs, mod3)
 
-        self.assertEqual(msg, demod1)
-        self.assertEqual(msg, demod2)
-        self.assertEqual(msg2, demod3)
+        demodPacket1 = XIPacket.createXIPacket(buffer=demod1)
+        demodPacket2 = XIPacket.createXIPacket(buffer=demod2)
+        demodPacket3 = XIPacket.createXIPacket(buffer=demod3)
+
+        demod1Msg = demodPacket1.payload
+        demod2Msg = demodPacket2.payload
+        demod3Msg = demodPacket3.payload
+
+        self.assertEqual(msg, demod1Msg)
+        self.assertEqual(msg, demod2Msg)
+        self.assertEqual(msg2, demod3Msg)
 
 
 class TestSRRC(unittest.TestCase):
