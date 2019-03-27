@@ -162,13 +162,15 @@ class Modulation:
         
         peakStartList, peakEndList = self.findAllStartEnd(yup, showAllPlots=showAllPlots)
 
-        # pick first start and end pair
-        peakStartIndex = peakStartList[0]
-        peakEndIndex = peakEndList[0]
+        strOut = ""
+        if len(peakStartList) > 0 and len(peakEndList):
+            # pick first start and end pair
+            peakStartIndex = peakStartList[0]
+            peakEndIndex = peakEndList[0]
 
-        # demodulate only the chosen set in yup
-        strOut = self.demodulateBetweenIndices(fc, fs, peakStartIndex, peakEndIndex, yup, 
-            showAllPlots=showAllPlots, showFinalConstellation=showFinalConstellation)
+            # demodulate only the chosen set in yup
+            strOut = self.demodulateBetweenIndices(fc, fs, peakStartIndex, peakEndIndex, yup, 
+                showAllPlots=showAllPlots, showFinalConstellation=showFinalConstellation)
         
         return strOut
 
