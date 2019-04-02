@@ -9,7 +9,7 @@ import scipy.fftpack as fftpack
 from modulation.Modulation import ModulationFactory
 from plutoDevice.PlutoSdrWrapper import PlutoSdrWrapper
 from plutoDevice.SimPlutoSdr import SimPlutoSdr
-
+from networking.xi import XIPacket
 
 _sdr = None
 
@@ -50,9 +50,12 @@ def getSdr():
         if len(ctxs.keys()) > 0:
             _sdr = PlutoSdrWrapper()
         else:
-            _sdr = SimPlutoSdr()
+            _sdr = SimPlutoSdr(P=30, alpha=0.3, desiredBandwidth=1.0)
 
     return _sdr
+
+def getScheme():
+    return _scheme
 
 def getIIOContext():
     """
@@ -84,7 +87,8 @@ def writeXSamples():
     """
     global _msg, _msg_sent
     msg = _msg
-    iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, msg)
+    packet = XIPacket(buffer=msg)
+    iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, packet.rep)
 
     _sdr.writeTx(iq)
     _msg_sent = True
@@ -135,18 +139,23 @@ def plutoRXThread(args):
             txData = writeXSamples()
             testPlot.txData = txData
 
-        rxData = readComplexRX()
-        testPlot.compl = True
-        # testPlot.plot_fir = True
-        testPlot.rxData = rxData
-
         if rx_show_all_plots or readRX:
-            _msg_recv = _scheme.demodulateData(_sdr.rx_lo_freq, _sdr.sampling_frequency, 
-                        rxData, showAllPlots=rx_show_all_plots)
+            rxData = readComplexRX()
+            testPlot.rxData = rxData
+            _msg_recv = getMessage(rxData)
             print(len(_msg_recv))
             print(_msg_recv)
         
         time.sleep(threadPeriod)
+
+def getMessage(rxData):
+    msg = ""
+    if len(rxData) > 0:
+        buffer = _scheme.demodulateData(_sdr.rx_lo_freq, _sdr.sampling_frequency, 
+                            rxData, showAllPlots=rx_show_all_plots)
+        packet = XIPacket.createXIPacket(buffer=buffer)
+        msg = packet.payload if packet and packet.payload else ""
+    return msg
 
 def readRXMessage():
     return  _msg_recv
