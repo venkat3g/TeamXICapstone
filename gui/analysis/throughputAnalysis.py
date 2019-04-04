@@ -1,25 +1,29 @@
 from timeit import default_timer as timer
 import time
 import logging
+from ..networking.xi import XIPacket
 
 
 def calculateThroughput(socket, msg, runtime):
     """
     Calculates Throughput in Kbps
     """
+    packet = XIPacket(buffer=msg)
     return (
-        socket.getValidPackets() * len(msg)) / runtime / 2**10 * 8  # in kbps
+        socket.getValidPackets() * packet.length) / runtime / 2**10 * 8  # in kbps
 
 
 def calculateTheoreticalThroughput(socket, msg):
     """
     Calculates Theoretical Throughput in Kbps
+    including packet overhead
     """
     fc = socket.sdr.tx_lo_freq
     fs = socket.sdr.sampling_frequency
     txDataSize = socket.scheme.modulateData(fc, fs, msg)
-    theoreticalThroughput = fs * 1e6 / len(txDataSize) * len(
-        msg) / 2**10 * 8  # in kbps
+    packet = XIPacket(buffer=msg)
+    theoreticalThroughput = fs * 1e6 / len(
+        txDataSize) * packet.length / 2**10 * 8  # in kbps
     return theoreticalThroughput
 
 
