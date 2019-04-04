@@ -137,8 +137,10 @@ class Socket:
         elif self.getValidPacketRatio() > 0.95:
             # decrease RX samples to see if our percentage goes down.
             # decrease by 5%
-            self.ioManager.setRXSamples(currentRXSamples * 0.95)
-            
+            if currentRXSamples * 0.95 > 1024:
+                # prevent rxSamples from going to low, really only an issues for Sim
+                self.ioManager.setRXSamples(currentRXSamples * 0.95)
+
     def processPacketReps(self, packets):
         packets.sort(key=lambda x: x.header.seqNum)
 
