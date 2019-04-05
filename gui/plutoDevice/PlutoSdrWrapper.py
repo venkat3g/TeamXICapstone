@@ -42,7 +42,7 @@ class PlutoSdrWrapper(PlutoSdr):
         else:   # samples can come from some DiscreteSignalSource, if so
                 # data is complex IQ and scaled to +/-1.0 float range
                 # use 16 **not** self.no_bits to align data to msb
-            data = self.complex2raw(samples, 16)
+            data = self.complex2raw(samples, 12)
         # samples are 2 bytes each with interleaved I/Q value (no_samples = len/4)
         self.tx_state = self.TX_DMA                 # enable the tx channels
         try:  # create a cyclic iio buffer for continuous tx output
@@ -54,4 +54,4 @@ class PlutoSdrWrapper(PlutoSdr):
             self.tx_state = self.TX_OFF
             raise OSError('failed to create an iio buffer')
         # buffer retained after a successful call
-        return count # just for now
+        return count, data # just for now

@@ -90,10 +90,10 @@ def writeXSamples():
     packet = XIPacket(buffer=msg)
     iq = _scheme.modulateData(_sdr.tx_lo_freq, _sdr.sampling_frequency, packet.rep)
 
-    _sdr.writeTx(iq)
+    _, data = _sdr.writeTx(iq)
     _msg_sent = True
 
-    return _sdr.raw2complex(iq) if iq.dtype == np.int16 else iq
+    return _sdr.raw2complex(data)
 
 def turnOffTX():
     _sdr.writeTx([]) # turns off TX
