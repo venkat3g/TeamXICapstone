@@ -153,9 +153,7 @@ class _PlutoIOManager():
         self._set_raw(txData)
 
     def preprocess_msgs(self, msgs):
-        fc = self._sdr.rx_lo_freq
-        fs = self._sdr.sampling_frequency
-        workerArgs = [[fc, fs, self._scheme, msg] for msg in msgs]
+        workerArgs = [[self._scheme, msg] for msg in msgs]
         res = self._txPool.map(_modulateTXData_unpack, workerArgs)
         return res
 
@@ -175,11 +173,12 @@ def _readComplexRX(sdr, rxSamples):
     return rxData
 
 
-def _demodRXData(fc, fs, scheme, rxData):
+def _demodRXData(scheme, channelGain, rxData):
     demod = timer()
     lengthUpsampledPilot = len(scheme._pilot_upsample)
-    demodData = scheme.demodulateBetweenIndices(fc, fs, lengthUpsampledPilot,
-                                                len(rxData), rxData)
+    demodData = scheme.demodulateBetweenIndices(lengthUpsampledPilot,
+                                                len(rxData), channelGain,
+                                                rxData)
     demodEnd = timer()
     logging.debug("Demod time: %fms" % ((demodEnd - demod) * 1e3))
     return demodData if demodData else ""
@@ -241,11 +240,12 @@ def waitForNewSamples(sdr, rxSamplesToCollect, lastCollectTime):
 def processRXData(rxData, scheme, sdr, rxPool):
     unfilter = timer()
     unfilteredData = unfilterData(scheme, rxData)
-    startEndPairs = createStartEndPairs(scheme, unfilteredData)
+    startEndPairs, channelGain = createStartEndPairs(scheme, unfilteredData)
     unfilterEnd = timer()
 
     worker = timer()
-    results = _sendToWorker(rxPool, sdr, scheme, unfilteredData, startEndPairs)
+    results = _sendToWorker(rxPool, sdr, scheme, unfilteredData, startEndPairs,
+                            channelGain)
     workerEnd = timer()
 
     nonEmptyMessages = filter(lambda x: len(x) > 0, results)
@@ -270,7 +270,7 @@ def unfilterData(scheme, rxData):
 
 
 def createStartEndPairs(scheme, unfilteredData):
-    startTimes, endTimes = scheme.findAllStartEnd(unfilteredData)
+    startTimes, endTimes, channelGain = scheme.findAllStartEnd(unfilteredData)
 
     # create all (start, end) pairs
     minLength = min(len(startTimes), len(endTimes))
@@ -280,15 +280,14 @@ def createStartEndPairs(scheme, unfilteredData):
     #           - Create a buffer called remaining and prepend
     #             it to next unfiltered rxData set
 
-    return startEndPairs
+    return startEndPairs, channelGain
 
 
-def _sendToWorker(rxPool, sdr, scheme, unfilteredData, startEndPairs):
-    fc = sdr.rx_lo_freq
-    fs = sdr.sampling_frequency
+def _sendToWorker(rxPool, sdr, scheme, unfilteredData, startEndPairs,
+                  channelGain):
     lengthUpsampledPilot = len(scheme._pilot_upsample)
     workerArgs = [[
-        fc, fs, scheme,
+        scheme, channelGain,
         unfilteredData[pair[0] - lengthUpsampledPilot:pair[1] + 1]
     ] for pair in startEndPairs]
 
@@ -312,8 +311,8 @@ def updateProcessingStats(processingTime):
     _processingTime += processingTime
 
 
-def _modulateTXData(fc, fs, scheme, msg):
-    return scheme.modulateData(fc, fs, msg)
+def _modulateTXData(scheme, msg):
+    return scheme.modulateData(msg)
 
 
 def _modulateTXData_unpack(args):
@@ -325,9 +324,7 @@ def _writeMsg(sdr, scheme, msg):
     Write data to TX
     """
     global _msg_sent
-    fc = sdr.tx_lo_freq
-    fs = sdr.sampling_frequency
-    txData = _modulateTXData(fc, fs, scheme, msg)
+    txData = _modulateTXData(scheme, msg)
     sdr.writeTx(txData)
     _msg_sent = True
 

@@ -40,9 +40,8 @@ def finalResults(socket, msg, start, end):
           (socket.getValidPacketRatio(), socket.getValidPackets(),
            socket.getTotalPackets()))
 
-    fc = socket.sdr.tx_lo_freq
     fs = socket.sdr.sampling_frequency
-    txDataSize = socket.scheme.modulateData(fc, fs, msg)
+    txDataSize = socket.scheme.modulateData(msg)
     theoreticalThroughput = fs * 1e6 / len(txDataSize) * len(
         msg) / 2**10 * 8  # in kbps
     runtime = end - start
@@ -91,9 +90,8 @@ def showProcessingTimeStats(socket, msg, start, end):
     avgProcessing = processingTime / validPackets if validPackets != 0 else 1
 
     # calculate theoretical throughput
-    fc = socket.sdr.tx_lo_freq
     fs = socket.sdr.sampling_frequency
-    txDataSize = socket.scheme.modulateData(fc, fs, msg)
+    txDataSize = socket.scheme.modulateData(msg)
     theoreticalThroughput = fs * 1e6 / len(txDataSize) * len(msg)  # in B/s
     avgTheoreticalProcessing = len(msg) / theoreticalThroughput
 
@@ -198,16 +196,21 @@ def getResults(rxSamples, msg):
 
     return result
 
+
 def getResults_unpack(args):
     return getResults(*args)
+
 
 class NoDaemonProcess(multiprocessing.Process):
     # make 'daemon' attribute always return False
     def _get_daemon(self):
         return False
+
     def _set_daemon(self, value):
         pass
+
     daemon = property(_get_daemon, _set_daemon)
+
 
 # We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
 # because the latter is only a wrapper function, not a proper class.
@@ -244,7 +247,6 @@ if __name__ == "__main__":
     for rxSamples in [2**x for x in range(17, 19)]:
         for msg in msgs:
             params.append([rxSamples, msg])
-    
     processPool = MyPool(4)
 
     start = timer()
