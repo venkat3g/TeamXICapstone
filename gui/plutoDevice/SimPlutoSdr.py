@@ -9,6 +9,10 @@ class _SimCtx():
         self.name = "Sim"
 
 
+FLOAT = np.float64
+COMPLEX = np.complex128
+
+
 class SimPlutoSdr():
     def __init__(self, P, alpha, desiredBandwidth):
         self.ctx = _SimCtx()
@@ -30,12 +34,28 @@ class SimPlutoSdr():
         self._buffer = np.zeros(2**18)
         # Timer used to simulate sampling frequency
         self._lastRead = 0
+        self.no_bits = 12
+
+    def raw2complex(self, data):
+        """return a scaled complex float version of the raw data"""
+        # convert to float64, view performs an in place recast of the data
+        # from SO 5658047
+        # are the #bits available from some debug attr?
+        # scale for 11 bits (signed 12)
+        iq = 2**-(self.no_bits - 1) * data.astype(FLOAT)
+        return iq.view(COMPLEX)
+
+    def complex2raw(self, data, no_bits):
+        iq = np.round((2**(no_bits - 1)) * data.view(FLOAT)).astype(np.int16)
+        return iq
 
     def writeTx(self, data, raw=False):
+        rawData = np.array([])
         if len(data) > 0:
+            rawData = self.complex2raw(data, 12) if not raw else data
             # Simulated Channel
             t0 = 0  # channel delay
-            A = 2**12  # channel gain
+            A = 2**self.no_bits  # channel gain
             h = A * np.append(np.zeros(t0, dtype=int), [1])
 
             r = sig.convolve(data, h)
@@ -47,6 +67,8 @@ class SimPlutoSdr():
         else:
             r = np.zeros(len(self._buffer))
             self._buffer = r[0:len(self._buffer)]
+
+        return len(data), rawData
 
     def readRx(self, num_samples, raw=False):
         a = np.zeros(num_samples, complex)
@@ -64,4 +86,4 @@ class SimPlutoSdr():
         if self._lastRead - lastRead < timeForSamples:
             time.sleep(timeForSamples - (self._lastRead - lastRead))
 
-        return a
+        return a / (2**self.no_bits - 1)
