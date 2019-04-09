@@ -31,6 +31,11 @@ class Socket:
         self._validPackets = 0
         self._totalPackets = 0
 
+        self._sendAcks = True
+
+    def sendAcks(self, sendAcks):
+        self._sendAcks = sendAcks
+
     def close(self):
         maxSeqNumber = 2**XIPacketHeader()._seq_num_bit_length
         for _ in range(maxSeqNumber):
@@ -115,7 +120,8 @@ class Socket:
 
         if len(packets) > 0:
             self.processPacketReps(packets)
-            self.findACK(packets)
+            if self._sendAcks:
+                self.findACK(packets)
             self._recent_rx_msg = packets[len(packets) - 1].payload
             packets.sort(key=lambda x: x.header.seqNum)
             for packet in packets:
@@ -156,8 +162,8 @@ class Socket:
 
         # send an ack up until the most recent sequence number in order
         # acking that we have received until sequence number correctly
-        # TODO: Send ACK for when message has been received.
-        # self.sendACK(lastSeqNumber)
+        if self._sendAcks:
+            self.sendACK(lastSeqNumber)
 
     def findACK(self, packets):
         packets = filter(lambda x: x.header.type == PACKET_TYPE.ACK, packets)

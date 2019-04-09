@@ -120,6 +120,11 @@ def showProcessingTimeStats(socket, msg, start, end):
 
 
 def modulationAnalysis(socket, msg):
+    socket.sendMsg(msg)
+    socket.ioManager.setRXSamples(2**18)
+    # no need for acknowledgements
+    socket.sendAcks(False)
+
     # give some time for ioManager to "warm up" Process Pools
     time.sleep(2)
 
@@ -153,6 +158,8 @@ def modulationAnalysis(socket, msg):
 
 
 def testPacketACKs(socket):
+    socket.sendMsgs(['a','b','c','d','e','f', 'g', 'h'])
+
     # give some time for ioManager to "warm up" Process Pools
     time.sleep(2)
 
@@ -192,12 +199,9 @@ if __name__ == "__main__":
 
     msg = generateAZLetters(payloadSize)
     # msg = generateAllOnes(payloadSize)
-    socket.sendMsg(msg)
-    socket.ioManager.setRXSamples(2**18)
-    throughput = modulationAnalysis(socket, msg)
+    # throughput = modulationAnalysis(socket, msg)
 
-    # socket.sendMsgs(['a','b','c','d','e','f', 'g', 'h'])
-    # testPacketACKs(socket)
+    testPacketACKs(socket)
 
     socket.close()
     # print("Throughput: %f Kbps" % (throughput))

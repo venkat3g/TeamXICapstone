@@ -90,6 +90,7 @@ def startAnalysis():
 
     currentMsg = generateAZLetters(msgSize)
     socket = Socket(PlutoController.getSdr(), PlutoController.getScheme())
+    socket.sendAcks(False)
     socket.ioManager.setRXSamples(int(support.startingRXSample_value.get()))
     socket.sendMsg(currentMsg)
 
