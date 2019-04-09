@@ -52,7 +52,12 @@ class SimPlutoSdr():
     def writeTx(self, data, raw=False):
         rawData = np.array([])
         if len(data) > 0:
-            rawData = self.complex2raw(data, 12) if not raw else data
+            maxBeforeClipping = 15
+            dataMax = data.max()
+            while np.abs(2**maxBeforeClipping * dataMax > 2**14):
+                maxBeforeClipping -= 1
+            
+            rawData = self.complex2raw(data, maxBeforeClipping + 1) if not raw else data
             # Simulated Channel
             t0 = 0  # channel delay
             A = 2**self.no_bits  # channel gain
