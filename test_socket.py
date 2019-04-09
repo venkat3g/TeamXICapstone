@@ -158,7 +158,9 @@ def modulationAnalysis(socket, msg):
 
 
 def testPacketACKs(socket):
-    socket.sendMsgs(['a','b','c','d','e','f', 'g', 'h'])
+    # socket.sendMsgs(['a','b','c','d','e','f', 'g', 'h'])
+    msgsSize = 50
+    socket.sendMsgs([chr(ord('a') + (x % 26)) * msgsSize for x in range(100)])
 
     # give some time for ioManager to "warm up" Process Pools
     time.sleep(2)

@@ -3,6 +3,7 @@ from xi import XIPacket, XIPacketHeader, PACKET_TYPE
 from ..ThreadWrapper import ThreadController
 import threading
 import numpy as np
+import time
 
 
 class Socket:
@@ -24,12 +25,14 @@ class Socket:
         self.sendMessageSemaphore = threading.Semaphore(
             2**XIPacketHeader()._seq_num_bit_length)
 
-        self._received_msgs = set()
+        self._received_msgs_set = set()
+        self._received_msgs = []
         self._recent_tx_msg = ''
         self._recent_rx_msg = ''
         self._recent_rx = np.array([])
         self._validPackets = 0
         self._totalPackets = 0
+        self._lastAckHash = 0
 
         self._sendAcks = True
 
@@ -38,6 +41,12 @@ class Socket:
 
     def close(self):
         maxSeqNumber = 2**XIPacketHeader()._seq_num_bit_length
+
+        # clear all messages from msgs thread's queue.
+        msgsAlias = self.msgsThreadController.collectionThreadArgs['msgs']
+        while len(msgsAlias):
+            msgsAlias.pop(0)
+
         for _ in range(maxSeqNumber):
             self.sendMessageSemaphore.release()
 
@@ -120,16 +129,23 @@ class Socket:
 
         if len(packets) > 0:
             self.processPacketReps(packets)
+            self._recent_rx_msg = packets[len(packets) - 1].payload
             if self._sendAcks:
                 self.findACK(packets)
-            self._recent_rx_msg = packets[len(packets) - 1].payload
-            packets.sort(key=lambda x: x.header.seqNum)
-            for packet in packets:
-                self._received_msgs.add(packet)
+
+            self.addUniqPackets(
+                filter(lambda x: x.header.type == PACKET_TYPE.DATA, packets))
+
         else:
             self._recent_rx_msg = ""
 
         self.adjustRXSamples()
+
+    def addUniqPackets(self, packets):
+        for packet in packets:
+            if packet not in self._received_msgs_set:
+                self._received_msgs_set.add(packet)
+                self._received_msgs.append(packet)
 
     def adjustRXSamples(self):
         """
@@ -153,17 +169,19 @@ class Socket:
         # sends acks in order since we care about
         # the order of packets received
         lastSeqNumber = packets[0].header.seqNum
+        lastPacket = None
         for packet in packets:
             if packet.header.type == PACKET_TYPE.DATA:
                 # only update sequence number if sequence number
                 # is one plus the previous sequence number
                 if lastSeqNumber + 1 == packet.header.seqNum:
+                    lastPacket = packet
                     lastSeqNumber = packet.header.seqNum
 
         # send an ack up until the most recent sequence number in order
         # acking that we have received until sequence number correctly
-        if self._sendAcks:
-            self.sendACK(lastSeqNumber)
+        if lastPacket and self._sendAcks:
+            self.sendACK(lastSeqNumber, str(hash(time.time())))
 
     def findACK(self, packets):
         packets = filter(lambda x: x.header.type == PACKET_TYPE.ACK, packets)
@@ -171,19 +189,23 @@ class Socket:
             packets.sort(key=lambda x: x.header.seqNum, reverse=True)
 
             lastSeqNumber = packets[0].header.seqNum
+            lastPacketHash = packets[0].payload
 
-            # if we received this ack this means the
-            # client received all of the message until
-            # the seq num successfully.
-            for _ in range(lastSeqNumber):
-                # release a value from the semaphore for
-                # each sequence number acked
-                self.sendMessageSemaphore.release()
+            if lastPacketHash != self._lastAckHash:
+                self._lastAckHash = lastPacketHash
+                # if we received this ack this means the
+                # client received all of the message until
+                # the seq num successfully.
+                for _ in range(lastSeqNumber):
+                    # release a value from the semaphore for
+                    # each sequence number acked
+                    self.sendMessageSemaphore.release()
 
-    def sendACK(self, seqNum):
+    def sendACK(self, seqNum, ackPayload):
         # directly send ack on the tx line
         # this ignores the message queue
-        ackPacket = XIPacket(type=PACKET_TYPE.ACK, seqNum=seqNum)
+        ackPacket = XIPacket(
+            type=PACKET_TYPE.ACK, seqNum=seqNum, buffer=ackPayload)
         self.ioManager.writeOnce(ackPacket.rep)
 
 
