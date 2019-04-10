@@ -630,12 +630,15 @@ class ModulationFactory:
     QAM4 = '4qam'
     QAM16 = '16qam'
     QAM64 = '64qam'
+    QAM256 = '256qam'
     SUPPORTED_SCHEMES = [
         BPSK,
         QPSK,
         QAM,
         QAM4,
         QAM16,
+        QAM64,
+        QAM256
     ]
 
     @staticmethod
@@ -667,6 +670,8 @@ class ModulationFactory:
             scheme = _create_qam_modulation(args={'m': 16})
         elif schemeName == ModulationFactory.QAM64:
             scheme = _create_qam_modulation(args={'m': 64})
+        elif schemeName == ModulationFactory.QAM256:
+            scheme = _create_qam_modulation(args={'m': 256})
         else:
             raise ValueError(schemeName + ' is not supported')
 
