@@ -461,8 +461,8 @@ class _QAM(Modulation):
 
         data = np.array(data)
 
-        reals = np.round(data.real)
-        imags = np.round(data.imag)
+        reals = data.real // 2 * 2 + 1
+        imags = data.imag // 2 * 2 + 1
 
         AInts = (reals + valueRange) / 2 + 0.5
         BInts = (imags + valueRange) / 2 + 0.5
@@ -498,11 +498,12 @@ class _QAM(Modulation):
         labels = []
         formatStr = "0%db" % symbolHalf
 
+        def round_up_to_odd(value):
+            return value // 2 * 2 + 1
+
         def getLabel(symbol):
-            real = int(symbol.real + 0.5 if symbol.real > 0 else
-                       symbol.real - 0.5)  # quick round
-            imag = int(symbol.imag + 0.5 if symbol.imag > 0 else
-                       symbol.imag - 0.5)  # quick round
+            real = round_up_to_odd(symbol.real)
+            imag = round_up_to_odd(symbol.imag)
             AInt = int((real + valueRange) / 2 + 0.5)
             BInt = int((imag + valueRange) / 2 + 0.5)
 
