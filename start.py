@@ -18,9 +18,11 @@ if __name__ == "__main__":
 
     PlutoController.readRX = True
     PlutoController.rx_show_all_plots = False
+    PlutoController.threadPeriod = 1
 
     if PlutoController.rx_show_all_plots:
-        PlutoController.configure(2400, 3, 10)
+        PlutoController.getSdr()
+
 
     if not PlutoController.rx_show_all_plots:
         deviceInfoPage.vp_start_gui()

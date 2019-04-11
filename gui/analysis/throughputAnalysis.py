@@ -19,8 +19,8 @@ def calculateTheoreticalThroughput(socket, msg):
     including packet overhead
     """
     fs = socket.sdr.sampling_frequency
-    txDataSize = socket.scheme.modulateData(msg)
     packet = XIPacket(buffer=msg)
+    txDataSize = socket.scheme.modulateData(packet.rep)
     theoreticalThroughput = fs * 1e6 / len(
         txDataSize) * packet.length / 2**10 * 8  # in kbps
     return theoreticalThroughput
