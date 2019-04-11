@@ -443,6 +443,8 @@ class _QAM(Modulation):
 
     pilot_sequence = property(_get_pilot_sequence)
 
+    vectorized = False
+
     def symbolMap(self, data, raw=False):
         binaryRep = _get_binary_rep(data)
         bitsPerSymbol = int(np.log2(self.m))
@@ -580,13 +582,12 @@ class _QAM(Modulation):
             correctedYData = yData - np.mean(yPilots)
 
             # undo symbol mapping
-            if isinstance(self,
-                          _QAM) and (self.name == ModulationFactory.QAM16
-                                     or self.name == ModulationFactory.QAM4):
-                strOut = self.symbolVectorizedDemap(correctedYData, False)
+            demap = []
+            if isinstance(self, _QAM) and (self.vectorized):
+                demap = self.symbolVectorizedDemap(correctedYData, False)
             else:
-                strOut = self.symbolDemap(correctedYData, False)
-            strOut = "".join([chr(c) for c in strOut])
+                demap = self.symbolDemap(correctedYData, False)
+            strOut = "".join([chr(c) for c in demap])
 
             # final constellation
             if showFinalConstellation or showAllPlots:
@@ -632,6 +633,10 @@ class ModulationFactory:
     QAM16 = '16qam'
     QAM64 = '64qam'
     QAM256 = '256qam'
+    QAM4VECTORIZED = '4qam Vectorized'
+    QAM16VECTORIZED = '16qam Vectorized'
+    QAM64VECTORIZED = '64qam Vectorized'
+    QAM256VECTORIZED = '256qam Vectorized'
     SUPPORTED_SCHEMES = [
         BPSK,
         QPSK,
@@ -639,7 +644,11 @@ class ModulationFactory:
         QAM4,
         QAM16,
         QAM64,
-        QAM256
+        QAM256,
+        QAM4VECTORIZED,
+        QAM16VECTORIZED,
+        QAM64VECTORIZED,
+        QAM256VECTORIZED,
     ]
 
     @staticmethod
@@ -673,6 +682,18 @@ class ModulationFactory:
             scheme = _create_qam_modulation(args={'m': 64})
         elif schemeName == ModulationFactory.QAM256:
             scheme = _create_qam_modulation(args={'m': 256})
+        elif schemeName == ModulationFactory.QAM4VECTORIZED:
+            scheme = _create_qam_modulation(args={'m': 4})
+            scheme.vectorized = True
+        elif schemeName == ModulationFactory.QAM16VECTORIZED:
+            scheme = _create_qam_modulation(args={'m': 16})
+            scheme.vectorized = True
+        elif schemeName == ModulationFactory.QAM64VECTORIZED:
+            scheme = _create_qam_modulation(args={'m': 64})
+            scheme.vectorized = True
+        elif schemeName == ModulationFactory.QAM256VECTORIZED:
+            scheme = _create_qam_modulation(args={'m': 256})
+            scheme.vectorized = True
         else:
             raise ValueError(schemeName + ' is not supported')
 
