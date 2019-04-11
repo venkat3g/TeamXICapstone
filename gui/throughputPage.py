@@ -36,6 +36,7 @@ def init_throughput_gui():
     support.msgSize_value.set(str(msgSize))
     support.guiUpdate_value.set(str(threadUpdateTime))
     support.startingRXSample_value.set(str(2**18))
+    support.dynamicAdjust.set('0')
 
 
 def set_bindings():
@@ -81,7 +82,9 @@ def updateThread(args):
     while not args['done']:
         if socket is not None:
             updateGUI()
-
+            if support.dynamicAdjust.get() == '1':
+                # dynamically adjust samples if selected in GUI
+                socket.adjustRXSamples()
         time.sleep(threadUpdateTime)
 
 

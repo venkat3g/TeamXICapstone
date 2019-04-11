@@ -123,8 +123,6 @@ class Socket:
         else:
             self._recent_rx_msg = ""
 
-        self.adjustRXSamples()
-
     def adjustRXSamples(self):
         """
         Dynamically adjusts RX samples to attempt to increase throughput.
