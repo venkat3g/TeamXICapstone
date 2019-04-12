@@ -37,6 +37,7 @@ def init_throughput_gui():
     support.guiUpdate_value.set(str(threadUpdateTime))
     support.startingRXSample_value.set(str(2**18))
     support.dynamicAdjust.set('0')
+    support.transmit.set('1') # enable transmit by default
 
 
 def set_bindings():
@@ -94,7 +95,10 @@ def startAnalysis():
     currentMsg = generateAZLetters(msgSize)
     socket = Socket(PlutoController.getSdr(), PlutoController.getScheme())
     socket.ioManager.setRXSamples(int(support.startingRXSample_value.get()))
-    socket.sendMsg(currentMsg)
+    
+    # only transmit if selected in GUI
+    if support.transmit.get() == '1':
+        socket.sendMsg(currentMsg)
 
     updateGUIThread = ThreadWrapper.ThreadController(updateThread)
 

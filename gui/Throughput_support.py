@@ -5,6 +5,7 @@
 #  in conjunction with Tcl version 8.6
 #    Apr 02, 2019 11:19:01 PM EDT  platform: Windows NT
 #    Apr 11, 2019 05:16:28 PM EDT  platform: Windows NT
+#    Apr 12, 2019 04:03:15 PM EDT  platform: Windows NT
 
 import sys
 
@@ -56,6 +57,8 @@ def set_Tk_var():
     startingRXSample_value = tk.StringVar()
     global dynamicAdjust
     dynamicAdjust = tk.StringVar()
+    global transmit
+    transmit = tk.StringVar()
 
 def init(top, gui, *args, **kwargs):
     global w, top_level, root
