@@ -32,12 +32,19 @@ def setMsgSize(sizeStr):
         msgSize = int(sizeStr)
 
 
+def setCorrectFrequency(correct_frequencyCheck):
+    PlutoController.getScheme(
+    ).correct_frequency = correct_frequencyCheck == '1'
+
+
 def init_throughput_gui():
     support.msgSize_value.set(str(msgSize))
     support.guiUpdate_value.set(str(threadUpdateTime))
     support.startingRXSample_value.set(str(2**18))
     support.dynamicAdjust.set('0')
-    support.transmit.set('1') # enable transmit by default
+    support.transmit.set('1')  # enable transmit by default
+    support.correct_frequency.set(
+        '1' if PlutoController.getScheme().correct_frequency else '0')
 
 
 def set_bindings():
@@ -45,6 +52,10 @@ def set_bindings():
         'w', lambda *args: setMsgSize(support.msgSize_value.get()))
     support.guiUpdate_value.trace(
         'w', lambda *args: setGUIUpdateTime(support.guiUpdate_value.get()))
+
+    support.correct_frequency.trace(
+        'w', lambda *args: setCorrectFrequency(support.correct_frequency.get())
+    )
 
 
 def updateGUI():
@@ -95,7 +106,7 @@ def startAnalysis():
     currentMsg = generateAZLetters(msgSize)
     socket = Socket(PlutoController.getSdr(), PlutoController.getScheme())
     socket.ioManager.setRXSamples(int(support.startingRXSample_value.get()))
-    
+
     # only transmit if selected in GUI
     if support.transmit.get() == '1':
         socket.sendMsg(currentMsg)
@@ -148,6 +159,9 @@ def start(root, onExit):
         if socket is not None:
             socket.close()
             socket = None
+
+        # set correct frequency back to True
+        PlutoController.getScheme().correct_frequency = True
 
         page.destroy_Throughput_TL()
         onExit()

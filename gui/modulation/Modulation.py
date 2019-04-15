@@ -138,6 +138,7 @@ class Modulation:
     D = property(_get_D, _set_D)
     alpha = property(_get_alpha, _set_alpha)
     name = ''
+    correct_frequency = True
 
     def modulateData(self, data):
         """
@@ -327,8 +328,13 @@ class Modulation:
                 ax.scatter(range(0, len(_pilots)), phaseError)
                 ax.set_title('Phase Error')
 
-            # Correct phase offset
-            syncData = yData * np.exp(-1.j * (intercept))
+            if self.correct_frequency:
+                # Correct freq and phase offset
+                n = np.arange(len(_pilots), (len(yData) + len(_pilots)))
+                syncData = yData * np.exp(-1.j * (slope * n + intercept))
+            else:
+                # Correct phase offset
+                syncData = yData * np.exp(-1.j * (intercept))
             syncData /= channelGain
 
             # undo symbol mapping
@@ -570,8 +576,14 @@ class _QAM(Modulation):
             # concat yPilots and yData to correct pilots
             y = np.concatenate((yPilots, yData))
 
-            # Correct phase offset
-            syncData = y * np.exp(-1.j * (meanPhase))
+            if self.correct_frequency:
+                # Correct freq and phase offset
+                n = np.arange(0, len(y))
+                syncData = y * np.exp(-1.j * (slope * n + intercept))
+            else:
+                # Correct phase offset
+                syncData = y * np.exp(-1.j * (meanPhase))
+
             syncData /= channelGain
 
             # Sep pilots and data from corrected phase
